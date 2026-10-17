@@ -21,11 +21,13 @@ export interface Scene {
   sizes: Map<number, Vec3>;
 }
 
-// The robot, after the pixel mascot: a wide block body, stubby arms, four little legs and two red eyes.
-// Meters, in the robot's own frame: x to its right, y up from the floor, -z out of its face.
-const ROBOT_BODY = vec3(0.87, 0.47, 0.35);
+// The robot, after the pixel mascot: a wide ribbed body, stubby arms, four little legs,
+// a skull on top and two red eyes. Meters, in the robot's own frame: x to its right,
+// y up from the floor, -z out of its face.
 const ROBOT_HIT = vec3(1, 0.86, 0.78);
 const ROBOT_EYE = vec3(1, 0.06, 0.04);
+// Body paint per spawn index: the office mascot orange, then bone-white skeletons and gunmetal.
+const ROBOT_SKINS = [vec3(0.87, 0.47, 0.35), vec3(0.85, 0.82, 0.74), vec3(0.45, 0.47, 0.52)];
 interface Part {
   at: [number, number, number];
   size: [number, number, number];
@@ -33,8 +35,15 @@ interface Part {
 }
 const LEG_TOP = 0.3;
 const BODY_Y = LEG_TOP + 0.4;
+const HEAD_Y = BODY_Y + 0.55;
 const ROBOT_PARTS: Part[] = [
   { at: [0, BODY_Y, 0], size: [1.2, 0.8, 0.7], eye: false },
+  // Ribs: thin bars across the chest, so the skeletons read as skeletons.
+  ...[-0.15, 0, 0.15].map((dy): Part => ({
+    at: [0, BODY_Y + dy, -0.36],
+    size: [0.9, 0.06, 0.03],
+    eye: false,
+  })),
   { at: [-0.7, BODY_Y - 0.1, 0], size: [0.2, 0.2, 0.3], eye: false },
   { at: [0.7, BODY_Y - 0.1, 0], size: [0.2, 0.2, 0.3], eye: false },
   ...[-0.45, -0.25, 0.25, 0.45].map((x): Part => ({
@@ -42,8 +51,10 @@ const ROBOT_PARTS: Part[] = [
     size: [0.1, LEG_TOP, 0.12],
     eye: false,
   })),
-  { at: [-0.35, BODY_Y + 0.1, -0.36], size: [0.1, 0.2, 0.04], eye: true },
-  { at: [0.35, BODY_Y + 0.1, -0.36], size: [0.1, 0.2, 0.04], eye: true },
+  // Skull: a smaller block above the body; the eyes moved up onto it.
+  { at: [0, HEAD_Y, -0.05], size: [0.42, 0.34, 0.38], eye: false },
+  { at: [-0.11, HEAD_Y + 0.04, -0.26], size: [0.08, 0.1, 0.04], eye: true },
+  { at: [0.11, HEAD_Y + 0.04, -0.26], size: [0.08, 0.1, 0.04], eye: true },
 ];
 
 const FIST = vec3(0.86, 0.67, 0.53);
@@ -76,13 +87,13 @@ export function createScene(renderer: Renderer, game: Game): Scene {
       vec3(b.x, b.y, b.z),
       vec3(b.w, b.h, b.d),
     );
-  const robots = game.enemies.map(() =>
+  const robots = game.enemies.map((_, i: number) =>
     ROBOT_PARTS.map((part): number => {
       const entity = add(
         world,
         sizes,
         cube,
-        part.eye ? ROBOT_EYE : ROBOT_BODY,
+        part.eye ? ROBOT_EYE : (ROBOT_SKINS[i % ROBOT_SKINS.length] ?? ROBOT_SKINS[0]),
         vec3(0, 0, 0),
         vec3(part.size[0], part.size[1], part.size[2]),
       );
@@ -156,7 +167,10 @@ export function sceneDraws(scene: Scene, game: Game): Draw[] {
       const entity = parts[j];
       if (entity === undefined) return;
       const mesh = world.meshes.get(entity);
-      if (mesh && !part.eye) mesh.color = e.hitFrames > 0 ? ROBOT_HIT : ROBOT_BODY;
+      if (mesh && !part.eye)
+        mesh.color = e.hitFrames > 0
+          ? ROBOT_HIT
+          : (ROBOT_SKINS[i % ROBOT_SKINS.length] ?? ROBOT_SKINS[0]);
       const [lx, ly, lz] = part.at;
       place(
         scene,

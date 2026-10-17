@@ -49,8 +49,14 @@ export const ENEMY = {
   radius: 0.6,
   // Frames a robot flashes after a hit.
   hitFrames: 12,
-  // Where the first robot stands for VS 0.1.
-  spawn: { x: 0, z: -4 },
+  // Where the skeleton robots stand for VS 0.1 (kept off the desks and the player's spawn).
+  spawns: [
+    { x: 0, z: -4 },
+    { x: -6, z: -2 },
+    { x: 6, z: -2 },
+    { x: -2, z: -8 },
+    { x: 2, z: -8 },
+  ],
   // Walk speed toward the player, meters per frame.
   speed: 1.1 * STEP,
   // Meters at which it stops and swings.

@@ -61,10 +61,10 @@ export interface Game {
   held: number;
 }
 
-function freshEnemy(): Enemy {
+function freshEnemy(x: number, z: number): Enemy {
   return {
-    x: ENEMY.spawn.x,
-    z: ENEMY.spawn.z,
+    x,
+    z,
     yaw: 0,
     health: ENEMY.maxHealth,
     hitFrames: 0,
@@ -91,7 +91,7 @@ export function createGame(seed: number): Game {
       health: PLAYER.maxHealth,
       hurtFrames: 0,
     },
-    enemies: [freshEnemy()],
+    enemies: ENEMY.spawns.map((s) => freshEnemy(s.x, s.z)),
     fists: { left: 0, right: 0 },
     kills: 0,
     held: 0,
