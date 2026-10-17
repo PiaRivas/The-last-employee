@@ -168,9 +168,8 @@ export function sceneDraws(scene: Scene, game: Game): Draw[] {
       if (entity === undefined) return;
       const mesh = world.meshes.get(entity);
       if (mesh && !part.eye)
-        mesh.color = e.hitFrames > 0
-          ? ROBOT_HIT
-          : (ROBOT_SKINS[i % ROBOT_SKINS.length] ?? ROBOT_SKINS[0]);
+        mesh.color =
+          e.hitFrames > 0 ? ROBOT_HIT : (ROBOT_SKINS[i % ROBOT_SKINS.length] ?? ROBOT_SKINS[0]);
       const [lx, ly, lz] = part.at;
       place(
         scene,
