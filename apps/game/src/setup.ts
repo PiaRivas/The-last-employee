@@ -9,6 +9,7 @@ import { createMasher, createProbe, type ProbeState } from "dotframe/src/probe";
 import { createRenderer } from "dotframe/src/render";
 import { LOOK, STEP } from "./config";
 import { createGame, type Game, randomInput, render, step, WINDOW } from "./game";
+import { before, play, type Sfx } from "./audio/sfx";
 import { Button, pack, toCount } from "./input";
 import { createScene } from "./render/scene";
 
@@ -18,6 +19,8 @@ export interface SetupOptions {
   // Called after each step with the probe state: the web publishes it as globalThis.__dotframe, native builds write
   // it to a file. Required, not optional: scriptc cannot represent an optional function.
   onProbe: (state: ProbeState) => void;
+  // Sound ids, filled in by the entry point as they load (see audio/sfx.ts).
+  sfx: Sfx;
 }
 
 // What setup needs from a platform: the async web and native platforms and iOS's library platform all have it.
@@ -43,7 +46,7 @@ function buttons(input: Input): number {
 }
 
 export function createSetup(options: SetupOptions): (platform: SetupPlatform) => Frame {
-  return ({ gpu, input }: SetupPlatform): Frame => {
+  return ({ gpu, input, audio }: SetupPlatform): Frame => {
     // The logical canvas keeps the game's aspect and grows to fill the screen.
     let aspect = 0;
     let offsetX = 0;
@@ -80,7 +83,9 @@ export function createSetup(options: SetupOptions): (platform: SetupPlatform) =>
         yaw -= yawCount * LOOK.step;
         pitch -= pitchCount * LOOK.step;
         const bits = mash ? mash() : pack(buttons(input), yawCount, pitchCount);
+        const was = before(game);
         step(game, [bits]);
+        play(options.sfx, audio, was, game);
         frame += 1;
         probe.update(null, "local", frame);
         options.onProbe(probe.state);

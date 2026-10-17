@@ -37,6 +37,10 @@ export const OFFICE = {
 
 export const ENEMY = {
   maxHealth: 100,
+  // Half the robot's width, for punch reach.
+  radius: 0.6,
+  // Frames a robot flashes after a hit.
+  hitFrames: 12,
   // Where the first robot stands for VS 0.1.
   spawn: { x: 0, z: -4 },
 };
@@ -47,4 +51,8 @@ export const COMBAT = {
   damage: 25,
   // Frames a punch takes from start to ready again.
   punchFrames: 18,
+  // Frames from the click to the moment the fist lands (the fist is furthest out at punchFrames / 2).
+  impactFrame: 9,
+  // Cosine of the widest angle off the view a robot can be hit at (about 45 degrees).
+  aimCos: 0.7,
 };

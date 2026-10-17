@@ -38,10 +38,10 @@ Primer prototipo funcional. Todo lo de abajo vive en `apps/game`.
 
 El esqueleto (rama `chore/skeleton-3d`) ya fija lo que comparten las dos personas: la forma del estado (`src/state.ts`), el input empaquetado (`src/input.ts`), los números (`src/config.ts`) y el orden de los sistemas en `step()` (`src/game.ts`). Cada quien trabaja en sus carpetas y busca sus `TODO(VS 0.1, …)`.
 
-| Persona                | Carpetas                               | Alcance                                                                                      |
-| ---------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------- |
-| A: mundo y jugador     | `src/world/`, `src/player/`            | 1 (oficina), 3 (salto y esquiva) y la colisión jugador contra cajas en `world/collision.ts`  |
-| B: combate, robot y UI | `src/combat/`, `src/enemy/`, `src/ui/` | 4 y 6 (impacto de los puños), 5 (robot), 7 (HUD con fuente), 8 y 9 (inicio, pausa, reinicio) |
+| Persona                | Carpetas                                             | Alcance                                                                                                                                                                                                            |
+| ---------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A: mundo y jugador     | `src/world/`, `src/player/`                          | 1 (oficina), 3 (salto y esquiva) y la colisión jugador contra cajas en `world/collision.ts`                                                                                                                        |
+| B: combate, robot y UI | `src/combat/`, `src/enemy/`, `src/ui/`, `src/audio/` | 4 (curva del puño), 5 (que el robot camine y ataque), 7 (HUD con fuente), 8 y 9 (inicio, pausa, reinicio). Ya hecho: impacto con alcance y ángulo, robot con ojos rojos que mira al jugador, sonidos de golpe y KO |
 
 Reglas para no pisarse:
 

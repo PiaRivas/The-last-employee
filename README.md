@@ -6,7 +6,7 @@ Comedia de acción FPS: el último trabajador humano lucha a puñetazos contra h
 - Alcance y criterios de cada entrega: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Cómo colaborar: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-> **Estado:** esqueleto 3D de la Vertical Slice 0.1. Oficina low-poly, cámara en primera persona con mouse look, WASD, un robot quieto y puños que salen al hacer clic. Falta lo que marca `TODO(VS 0.1, …)` en el código; el reparto está en [docs/ROADMAP.md](docs/ROADMAP.md#reparto).
+> **Estado:** esqueleto 3D de la Vertical Slice 0.1. Oficina low-poly, cámara en primera persona con mouse look, WASD, un robot naranja con ojos rojos que te mira, y puños que lo golpean (4 golpes lo tumban) con sonidos de Kenney. Falta lo que marca `TODO(VS 0.1, …)` en el código; el reparto está en [docs/ROADMAP.md](docs/ROADMAP.md#reparto).
 
 ## Stack
 
@@ -80,6 +80,6 @@ Haz clic en el juego para capturar el mouse.
 
 ## Cómo probar
 
-- **Hoy:** `bun run sim` devuelve `"ok": true`; `bun run test` imprime `ok` para `smoke.json` y `look-walk.json`; `bun run dev` muestra la oficina en primera persona.
+- **Hoy:** `bun run sim` devuelve `"ok": true`; `bun run test` imprime `ok` para `smoke.json`, `look-walk.json` y `punch-ko.json`; `bun run dev` muestra la oficina en primera persona.
 - **Vertical Slice 0.1:** criterios de aceptación en [docs/ROADMAP.md](docs/ROADMAP.md).
 - **Bucle de verificación:** cambias código, corres `sim` (estado en JSON), luego `snap` (miras el PNG) y después `test` (las replays siguen pasando). Si un cambio mueve el gameplay a propósito, vuelve a grabar las replays y dilo en el PR.

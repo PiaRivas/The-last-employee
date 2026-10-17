@@ -15,14 +15,37 @@ export interface Scene {
   world: World;
   environment: Environment;
   // Entities posed each frame.
-  robots: { body: number; head: number; tie: number }[];
+  robots: number[][];
   fists: { left: number; right: number };
   // Each entity's own size, so a hidden mesh (scale 0) can come back.
   sizes: Map<number, Vec3>;
 }
 
-const ROBOT = vec3(0.6, 0.62, 0.68);
-const ROBOT_HIT = vec3(1, 0.35, 0.3);
+// The robot, after the pixel mascot: a wide block body, stubby arms, four little legs and two red eyes.
+// Meters, in the robot's own frame: x to its right, y up from the floor, -z out of its face.
+const ROBOT_BODY = vec3(0.87, 0.47, 0.35);
+const ROBOT_HIT = vec3(1, 0.86, 0.78);
+const ROBOT_EYE = vec3(1, 0.06, 0.04);
+interface Part {
+  at: [number, number, number];
+  size: [number, number, number];
+  eye: boolean;
+}
+const LEG_TOP = 0.3;
+const BODY_Y = LEG_TOP + 0.4;
+const ROBOT_PARTS: Part[] = [
+  { at: [0, BODY_Y, 0], size: [1.2, 0.8, 0.7], eye: false },
+  { at: [-0.7, BODY_Y - 0.1, 0], size: [0.2, 0.2, 0.3], eye: false },
+  { at: [0.7, BODY_Y - 0.1, 0], size: [0.2, 0.2, 0.3], eye: false },
+  ...[-0.45, -0.25, 0.25, 0.45].map((x): Part => ({
+    at: [x, LEG_TOP / 2, 0],
+    size: [0.1, LEG_TOP, 0.12],
+    eye: false,
+  })),
+  { at: [-0.35, BODY_Y + 0.1, -0.36], size: [0.1, 0.2, 0.04], eye: true },
+  { at: [0.35, BODY_Y + 0.1, -0.36], size: [0.1, 0.2, 0.04], eye: true },
+];
+
 const FIST = vec3(0.86, 0.67, 0.53);
 
 function add(
@@ -53,11 +76,22 @@ export function createScene(renderer: Renderer, game: Game): Scene {
       vec3(b.x, b.y, b.z),
       vec3(b.w, b.h, b.d),
     );
-  const robots = game.enemies.map(() => ({
-    body: add(world, sizes, cube, ROBOT, vec3(0, 0, 0), vec3(0.7, 1.1, 0.45)),
-    head: add(world, sizes, cube, ROBOT, vec3(0, 0, 0), vec3(0.45, 0.4, 0.4)),
-    tie: add(world, sizes, cube, vec3(0.75, 0.1, 0.12), vec3(0, 0, 0), vec3(0.12, 0.5, 0.02)),
-  }));
+  const robots = game.enemies.map(() =>
+    ROBOT_PARTS.map((part): number => {
+      const entity = add(
+        world,
+        sizes,
+        cube,
+        part.eye ? ROBOT_EYE : ROBOT_BODY,
+        vec3(0, 0, 0),
+        vec3(part.size[0], part.size[1], part.size[2]),
+      );
+      const mesh = world.meshes.get(entity);
+      // The eyes glow; the body keeps its mascot orange even in shadow.
+      if (mesh) mesh.emissive = part.eye ? 2 : 0.35;
+      return entity;
+    }),
+  );
   const fists = {
     left: add(world, sizes, cube, FIST, vec3(0, 0, 0), vec3(0.09, 0.09, 0.16)),
     right: add(world, sizes, cube, FIST, vec3(0, 0, 0), vec3(0.09, 0.09, 0.16)),
@@ -111,24 +145,28 @@ export function camera(game: Game): Camera {
 export function sceneDraws(scene: Scene, game: Game): Draw[] {
   const { world } = scene;
   game.enemies.forEach((e, i: number): void => {
-    const r = scene.robots[i];
-    if (!r) return;
-    const color = e.hitFrames > 0 ? ROBOT_HIT : ROBOT;
-    for (const entity of [r.body, r.head]) {
+    const parts = scene.robots[i];
+    if (!parts) return;
+    // Rotation about y by yaw: local (x, z) to world.
+    const c = Math.cos(e.yaw);
+    const sn = Math.sin(e.yaw);
+    // A hit flashes the body and squashes the robot for a moment.
+    const squash = e.hitFrames > 0 ? 0.9 : 1;
+    ROBOT_PARTS.forEach((part, j: number): void => {
+      const entity = parts[j];
+      if (entity === undefined) return;
       const mesh = world.meshes.get(entity);
-      if (mesh) mesh.color = color;
-    }
-    place(scene, r.body, vec3(e.x, 0.95, e.z), e.yaw, 0, e.alive);
-    place(scene, r.head, vec3(e.x, 1.75, e.z), e.yaw, 0, e.alive);
-    // The tie hangs on the front (-z when yaw is 0).
-    place(
-      scene,
-      r.tie,
-      vec3(e.x - Math.sin(e.yaw) * 0.24, 1.05, e.z - Math.cos(e.yaw) * 0.24),
-      e.yaw,
-      0,
-      e.alive,
-    );
+      if (mesh && !part.eye) mesh.color = e.hitFrames > 0 ? ROBOT_HIT : ROBOT_BODY;
+      const [lx, ly, lz] = part.at;
+      place(
+        scene,
+        entity,
+        vec3(e.x + c * lx + sn * lz, ly * squash, e.z - sn * lx + c * lz),
+        e.yaw,
+        0,
+        e.alive,
+      );
+    });
   });
 
   // Fists in front of the eye, pushed forward while punching.

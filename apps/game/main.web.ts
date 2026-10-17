@@ -1,5 +1,7 @@
+import type { Platform } from "dotframe/src/platform";
 import { publishProbe } from "dotframe/src/probe-web";
-import { run } from "dotframe/src/web/run";
+import { loadBytes, run } from "dotframe/src/web/run";
+import { createSfx, loadSfx } from "./src/audio/sfx";
 import { WINDOW } from "./src/game";
 import { createSetup } from "./src/setup";
 
@@ -7,8 +9,17 @@ import { createSetup } from "./src/setup";
 const mash = new URLSearchParams(location.search).get("mash");
 
 // fit: "window" fills the browser window; pointerLock captures the mouse on click for first-person look.
+const sfx = createSfx();
+const setup = createSetup({
+  mash: mash === null ? null : Number(mash),
+  onProbe: publishProbe,
+  sfx,
+});
 await run(
   WINDOW,
-  createSetup({ mash: mash === null ? null : Number(mash), onProbe: publishProbe }),
+  (platform: Platform) => {
+    void loadSfx(sfx, platform.audio, loadBytes);
+    return setup(platform);
+  },
   { fit: "window", pointerLock: true },
 );
