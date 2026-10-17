@@ -1,6 +1,7 @@
 // Builds the web target into dist/web with a content-hashed bundle (main.<hash>.js) and a never-cached
 // index.html, so browsers and Discord's proxy never run a stale build.
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { basename } from "node:path";
 import { slimAssets } from "dotframe/cli/slim";
 
 const out = "dist/web";
@@ -19,7 +20,7 @@ if (!built.success) {
   for (const log of built.logs) console.error(log);
   process.exit(1);
 }
-const bundle = built.outputs[0].path.split("/").pop() ?? "main.js";
+const bundle = basename(built.outputs[0].path);
 const html = await Bun.file("index.html").text();
 writeFileSync(`${out}/index.html`, html.replace("./main.js", `./${bundle}`));
 writeFileSync(
