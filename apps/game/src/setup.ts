@@ -1,40 +1,24 @@
-// Shared by main.web.ts and main.native.ts: keyboard and pointer to inputs, fixed 60 Hz steps, one render per frame.
-// Online, the same steps go through dotframe's rollback netplay instead of straight to step().
+// Shared by main.web.ts, main.native.ts and main.ios.ts: keyboard and mouse to one packed input per frame, fixed
+// 60 Hz steps, one render per frame.
 import { createDraw2D } from "dotframe/src/draw2d";
 import type { AudioPlayer } from "dotframe/src/audio";
 import type { Frame, RenderGpu } from "dotframe/src/gpu";
 import type { Input } from "dotframe/src/input";
 import { Key, MouseButton } from "dotframe/src/input";
-import { createRollback, type RelayLink, type Rollback } from "dotframe/src/netplay";
 import { createMasher, createProbe, type ProbeState } from "dotframe/src/probe";
-import {
-  checksum,
-  createGame,
-  type Game,
-  keyInput,
-  PLAYERS,
-  POINTER_BIT,
-  randomInput,
-  render,
-  restore,
-  snapshot,
-  step,
-  WINDOW,
-} from "./game";
+import { createRenderer } from "dotframe/src/render";
+import { LOOK, STEP } from "./config";
+import { createGame, type Game, randomInput, render, step, WINDOW } from "./game";
+import { Button, pack, toCount } from "./input";
+import { createScene } from "./render/scene";
 
 export interface SetupOptions {
-  // An open relay link plays online as the slot the relay assigns; null plays locally.
-  link: RelayLink | null;
-  // A seed makes player 1 a scripted masher (tests); null reads the keyboard and pointer.
+  // A seed makes the player a scripted masher (tests); null reads the keyboard and mouse.
   mash: number | null;
   // Called after each step with the probe state: the web publishes it as globalThis.__dotframe, native builds write
-  // it to a file for dotframe play --native. Required, not optional: scriptc cannot represent an optional function.
+  // it to a file. Required, not optional: scriptc cannot represent an optional function.
   onProbe: (state: ProbeState) => void;
 }
-
-const STEP = 1 / 60;
-// A full charge takes one second of holding.
-const FULL_CHARGE = 60;
 
 // What setup needs from a platform: the async web and native platforms and iOS's library platform all have it.
 export interface SetupPlatform {
@@ -43,11 +27,24 @@ export interface SetupPlatform {
   audio: AudioPlayer;
 }
 
+function buttons(input: Input): number {
+  const pointer = input.pointer();
+  return (
+    (input.down(Key.W) ? Button.Forward : 0) |
+    (input.down(Key.S) ? Button.Back : 0) |
+    (input.down(Key.A) ? Button.Left : 0) |
+    (input.down(Key.D) ? Button.Right : 0) |
+    (input.down(Key.Space) ? Button.Jump : 0) |
+    (input.down(Key.ShiftLeft) ? Button.Dodge : 0) |
+    ((pointer.buttons & MouseButton.Left) !== 0 ? Button.PunchLeft : 0) |
+    ((pointer.buttons & MouseButton.Right) !== 0 ? Button.PunchRight : 0) |
+    (input.down(Key.Escape) ? Button.Pause : 0)
+  );
+}
+
 export function createSetup(options: SetupOptions): (platform: SetupPlatform) => Frame {
-  return ({ gpu, input, audio }: SetupPlatform): Frame => {
-    // The logical canvas keeps the game's aspect and grows to fill the screen: on a 2.16 phone the game area is
-    // centered with extra width around it instead of being stretched.
-    // Recomputed when the surface changes shape (a resizable window, run(..., { fit: "window" }) on the web).
+  return ({ gpu, input }: SetupPlatform): Frame => {
+    // The logical canvas keeps the game's aspect and grows to fill the screen.
     let aspect = 0;
     let offsetX = 0;
     let offsetY = 0;
@@ -62,79 +59,39 @@ export function createSetup(options: SetupOptions): (platform: SetupPlatform) =>
       offsetY = (logicalHeight - WINDOW.height) / 2;
       draw.resize(logicalWidth, logicalHeight);
     };
-    // Online peers must start from the same state, so the seed is fixed there.
-    const game: Game = createGame(options.link ? 1 : Math.floor(Math.random() * 1e9));
-    let rollback: Rollback | null = null;
+    const game: Game = createGame(Math.floor(Math.random() * 1e9));
+    const scene = createScene(createRenderer(gpu), game);
     const mash = options.mash === null ? null : createMasher(options.mash, randomInput);
-    // What dotframe play --online reads from each browser.
     const probe = createProbe();
-    let localFrame = 0;
+    let frame = 0;
     let simulated = -1;
-    // Hold to charge, release to act: the pattern most mouse and touch games need.
-    let charge = 0;
-    let wasDown = false;
+    // Mouse turn not yet sent, in radians: the input carries whole LOOK.step counts, the rest waits for next frame.
+    let yaw = 0;
+    let pitch = 0;
     return (time: number): boolean => {
       if (simulated < 0) simulated = time;
+      // Mouse right turns right (negative yaw), mouse down looks down (negative pitch).
+      const look = input.look();
+      yaw -= look.x * LOOK.sensitivity;
+      pitch -= look.y * LOOK.sensitivity;
       for (let n = 0; simulated + STEP <= time && n < 5; n++) {
-        const pointer = input.pointer();
-        const inside = pointer.x >= 0 && pointer.x <= 1 && pointer.y >= 0 && pointer.y <= 1;
-        const down =
-          inside && ((pointer.buttons & MouseButton.Left) !== 0 || input.touches().length > 0);
-        let released = false;
-        if (down) charge = Math.min(FULL_CHARGE, charge + 1);
-        else if (wasDown) {
-          released = true;
-          // Audio is presentation, never simulation state: the pitch says how charged the release was.
-          audio.tone(220 + (charge / FULL_CHARGE) * 660, 0.12, 0.25);
-          charge = 0;
-        }
-        wasDown = down;
-        const keys = [
-          keyInput(input, [Key.A, Key.D, Key.W, Key.J]),
-          keyInput(input, [Key.Left, Key.Right, Key.Up, Key.L]),
-        ];
-        if (released) keys[0] = keys[0] | POINTER_BIT;
-        if (mash) keys[0] = mash();
-        const link = options.link;
-        if (link) {
-          if (!rollback && link.status() === "paired") {
-            rollback = createRollback({
-              sim: {
-                step: (inputs: number[]): void => step(game, inputs),
-                save: (): Game => snapshot(game),
-                restore: (saved: Game): void => restore(game, saved),
-                checksum: (): number => checksum(game),
-              },
-              transport: link.transport,
-              localPort: link.slot(),
-              neutral: 0,
-              inputDelay: 2,
-              maxRollback: 20,
-            });
-          }
-          // Online, each browser controls its own player with player 1's keys.
-          if (rollback) rollback.tick(keys[0]);
-          probe.update(rollback, link.status());
-          options.onProbe(probe.state);
-        } else {
-          step(game, keys.slice(0, PLAYERS));
-          localFrame += 1;
-          probe.update(null, "local", localFrame);
-          options.onProbe(probe.state);
-        }
+        const yawCount = toCount(yaw);
+        const pitchCount = toCount(pitch);
+        yaw -= yawCount * LOOK.step;
+        pitch -= pitchCount * LOOK.step;
+        const bits = mash ? mash() : pack(buttons(input), yawCount, pitchCount);
+        step(game, [bits]);
+        frame += 1;
+        probe.update(null, "local", frame);
+        options.onProbe(probe.state);
         simulated += STEP;
       }
       fit();
       draw.begin();
       draw.translate(offsetX, offsetY);
-      render(game, draw);
-      if (charge > 0) {
-        // Charge meter under the play area.
-        draw.setFillStyle("#ffffff");
-        draw.fillRect(20, WINDOW.height - 16, (WINDOW.width - 40) * (charge / FULL_CHARGE), 6);
-      }
+      render(game, draw, scene);
       draw.resetTransform();
-      draw.end({ r: 0, g: 0, b: 0 });
+      draw.end({ r: 0.08, g: 0.08, b: 0.1 });
       return true;
     };
   };

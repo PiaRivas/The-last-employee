@@ -6,7 +6,7 @@ Comedia de acción FPS: el último trabajador humano lucha a puñetazos contra h
 - Alcance y criterios de cada entrega: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Cómo colaborar: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-> **Estado:** setup base. `apps/game` es el template `blank` de dotframe (dos cuadrados que se mueven) y sirve para probar que el toolchain funciona. El gameplay arranca con la Vertical Slice 0.1.
+> **Estado:** esqueleto 3D de la Vertical Slice 0.1. Oficina low-poly, cámara en primera persona con mouse look, WASD, un robot quieto y puños que salen al hacer clic. Falta lo que marca `TODO(VS 0.1, …)` en el código; el reparto está en [docs/ROADMAP.md](docs/ROADMAP.md#reparto).
 
 ## Stack
 
@@ -50,8 +50,12 @@ The-last-employee/
 │   └── game/                 # el juego (proyecto dotframe)
 │       ├── dotframe.json     # targets: web, discord, macos, windows, ios
 │       ├── sim.ts            # contrato Sim que usa el CLI
-│       ├── src/game.ts       # estado, step() y render()
-│       ├── src/setup.ts      # input y loop
+│       ├── src/config.ts     # todos los números de gameplay
+│       ├── src/state.ts      # estado del juego, snapshot/restore y checksum
+│       ├── src/input.ts      # input empaquetado en un número (botones + giro de cámara)
+│       ├── src/game.ts       # step() llama a los sistemas en orden; render() dibuja escena + HUD
+│       ├── src/{player,enemy,combat,world,ui,render}/  # un sistema por carpeta
+│       ├── src/setup.ts      # teclado/mouse a input y loop a 60 Hz
 │       ├── main.web.ts       # entrada web (también main.native.ts y main.ios.ts)
 │       ├── replays/          # replays doradas = tests de regresión
 │       └── AGENTS.md         # guía de dotframe para agentes
@@ -63,10 +67,19 @@ The-last-employee/
 
 ## Controles
 
-Se definen en la Vertical Slice 0.1 (WASD, salto, esquiva, puños con clic izquierdo y derecho, Esc para pausar). Esta sección se completa cuando estén implementados.
+Haz clic en el juego para capturar el mouse.
+
+| Tecla            | Acción                   | Estado                          |
+| ---------------- | ------------------------ | ------------------------------- |
+| Mouse            | Mirar                    | Listo                           |
+| W A S D          | Moverse                  | Listo                           |
+| Clic izq. / der. | Puño izquierdo / derecho | Animación lista, daño pendiente |
+| Espacio          | Saltar                   | Pendiente                       |
+| Shift izq.       | Esquivar                 | Pendiente                       |
+| Esc              | Pausa                    | Pendiente                       |
 
 ## Cómo probar
 
-- **Hoy:** `bun run sim` devuelve `"ok": true`; `bun run test` imprime `ok replays/smoke.json`; `bun run dev` muestra dos cuadrados que se mueven.
+- **Hoy:** `bun run sim` devuelve `"ok": true`; `bun run test` imprime `ok` para `smoke.json` y `look-walk.json`; `bun run dev` muestra la oficina en primera persona.
 - **Vertical Slice 0.1:** criterios de aceptación en [docs/ROADMAP.md](docs/ROADMAP.md).
 - **Bucle de verificación:** cambias código, corres `sim` (estado en JSON), luego `snap` (miras el PNG) y después `test` (las replays siguen pasando). Si un cambio mueve el gameplay a propósito, vuelve a grabar las replays y dilo en el PR.

@@ -1,87 +1,47 @@
-// The smallest dotframe game: two squares. All simulation state lives in Game and changes only in step(), so
-// dotframe can replay, snapshot, and roll it back. render() only reads it.
+// The frame: step() runs the systems in a fixed order, render() draws the scene and the HUD on top.
+// Each system lives in its own folder (player/, enemy/, combat/, world/, ui/, render/); numbers live in config.ts.
 import type { Draw2D } from "dotframe/src/draw2d";
-import type { Input } from "dotframe/src/input";
+import { stepCombat } from "./combat/combat";
+import { stepEnemies } from "./enemy/enemy";
+import { unpack } from "./input";
+import { stepPlayer } from "./player/player";
+import { sceneDraws, type Scene } from "./render/scene";
+import { type Game, Phase } from "./state";
+import { drawHud } from "./ui/hud";
 
-export const WINDOW = { width: 960, height: 540, title: "game" };
-// The input bit a released mouse or touch press sets for player 1 (fires the action bit); see src/setup.ts.
-export const POINTER_BIT = 8;
-export const PLAYERS = 2;
+export { WINDOW } from "./config";
+export { encode, randomInput } from "./input";
+export { checksum, createGame, type Game, restore, snapshot } from "./state";
 
-export interface Game {
-  frame: number;
-  players: { x: number; y: number }[];
-  // Never ends; set it to a player index to finish the match.
-  winner: number;
-}
-
-export function createGame(_seed: number): Game {
-  return {
-    frame: 0,
-    players: [
-      { x: 300, y: 270 },
-      { x: 660, y: 270 },
-    ],
-    winner: -1,
-  };
-}
-
-// Bits: left, right, up, action.
-export function encode(input: unknown): number {
-  const i = input as { left?: boolean; right?: boolean; up?: boolean; action?: boolean };
-  return (i.left ? 1 : 0) | (i.right ? 2 : 0) | (i.up ? 4 : 0) | (i.action ? 8 : 0);
-}
-
-export function keyInput(input: Input, keys: number[]): number {
-  return keys.reduce(
-    (bits: number, key: number, i: number): number => (input.down(key) ? bits | (1 << i) : bits),
-    0,
-  );
-}
-
-export function randomInput(next: () => number): number {
-  return Math.floor(next() * 16);
-}
+// Single player for VS 0.1.
+export const PLAYERS = 1;
 
 export function step(game: Game, inputs: number[]): void {
+  const input = unpack(inputs[0] ?? 0);
+  const pressed = input.buttons & ~game.held;
+  game.held = input.buttons;
   game.frame += 1;
-  game.players.forEach((p, i: number): void => {
-    const bits = inputs[i] ?? 0;
-    p.x = Math.max(20, Math.min(WINDOW.width - 20, p.x + (bits & 2 ? 4 : 0) - (bits & 1 ? 4 : 0)));
-    p.y = Math.max(20, Math.min(WINDOW.height - 20, p.y - (bits & 4 ? 4 : 0) + 1));
-  });
+  // TODO(VS 0.1, UI): Title, Paused and Over flows (Button.Pause, restart without reloading).
+  if (game.phase !== Phase.Playing) return;
+  stepPlayer(game, input);
+  stepCombat(game, pressed);
+  stepEnemies(game);
 }
 
-export function checksum(game: Game): number {
-  let h = 2166136261 ^ game.frame;
-  for (const p of game.players) h = Math.imul(Math.imul(h ^ p.x, 16777619) ^ p.y, 16777619);
-  return h >>> 0;
-}
-
+// A small summary for dotframe sim --json.
 export function state(game: Game): unknown {
-  return game;
-}
-
-// Field by field (scriptc compiles neither structuredClone nor Object.assign): netplay saves every frame.
-export function snapshot(game: Game): Game {
+  const p = game.player;
   return {
     frame: game.frame,
-    players: game.players.map((p) => ({ x: p.x, y: p.y })),
-    winner: game.winner,
+    phase: game.phase,
+    player: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health },
+    fists: game.fists,
+    enemies: game.enemies.map((e) => ({ x: e.x, z: e.z, health: e.health, alive: e.alive })),
+    kills: game.kills,
   };
 }
 
-export function restore(game: Game, saved: Game): void {
-  game.frame = saved.frame;
-  game.players = saved.players.map((p) => ({ x: p.x, y: p.y }));
-  game.winner = saved.winner;
-}
-
-export function render(game: Game, draw: Draw2D): void {
-  draw.setFillStyle("#101018");
-  draw.fillRect(0, 0, WINDOW.width, WINDOW.height);
-  game.players.forEach((p, i: number): void => {
-    draw.setFillStyle(i === 0 ? "#ff5a5f" : "#3fa7ff");
-    draw.fillRect(p.x - 20, p.y - 20, 40, 40);
-  });
+export function render(game: Game, draw: Draw2D, scene: Scene): void {
+  draw.scene(sceneDraws(scene, game));
+  drawHud(game, draw);
 }

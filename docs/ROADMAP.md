@@ -34,6 +34,21 @@ Primer prototipo funcional. Todo lo de abajo vive en `apps/game`.
 - [ ] El juego se reinicia sin recargar la página.
 - [ ] El proyecto corre localmente con `bun run dev`.
 
+### Reparto
+
+El esqueleto (rama `chore/skeleton-3d`) ya fija lo que comparten las dos personas: la forma del estado (`src/state.ts`), el input empaquetado (`src/input.ts`), los números (`src/config.ts`) y el orden de los sistemas en `step()` (`src/game.ts`). Cada quien trabaja en sus carpetas y busca sus `TODO(VS 0.1, …)`.
+
+| Persona                | Carpetas                               | Alcance                                                                                      |
+| ---------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| A: mundo y jugador     | `src/world/`, `src/player/`            | 1 (oficina), 3 (salto y esquiva) y la colisión jugador contra cajas en `world/collision.ts`  |
+| B: combate, robot y UI | `src/combat/`, `src/enemy/`, `src/ui/` | 4 y 6 (impacto de los puños), 5 (robot), 7 (HUD con fuente), 8 y 9 (inicio, pausa, reinicio) |
+
+Reglas para no pisarse:
+
+- `state.ts`, `input.ts`, `config.ts` y `game.ts` son compartidos: cambios chicos, en su propio PR, y avisando a la otra persona.
+- Si agregas un campo al estado, actualiza `createGame`, `snapshot`, `restore` y `checksum` en el mismo commit.
+- PRs chicos y seguido contra `main`. Al rebasar, si una replay deja de pasar por un cambio del otro, vuelve a grabarla y dilo en el PR.
+
 ### Fuera de alcance (todavía)
 
 Oleadas, múltiples enemigos, jefes, multijugador y cualquier función adicional.
@@ -41,7 +56,8 @@ Oleadas, múltiples enemigos, jefes, multijugador y cualquier función adicional
 ### Decisiones abiertas
 
 - **Colisiones 3D.** `dotframe/src/physics` solo resuelve cajas en un plano 2D. Para la oficina (paredes, escritorios, robot) la opción recomendada es colisión propia y determinista dentro de `step()`: el jugador como cilindro contra cajas alineadas a los ejes. Usar Rapier rompería el `save/restore` de la sim y los builds nativos.
-- **Plantilla de partida.** `apps/game` es el template `blank` (2D). La VS 0.1 lo reemplaza por una escena 3D (`createRenderer(platform.gpu)` y `run(..., { pointerLock: true })`, ver `dotframe skills get core` → "3D games"). Referencia de un FPS 3D hecho con dotframe: [the-ones-game](https://github.com/crafter-games/the-ones-game).
+- **Plantilla de partida.** Resuelta: el esqueleto reemplaza el template `blank` por una escena 3D (`createRenderer(platform.gpu)` y `run(..., { pointerLock: true })`). El juego es de un jugador; se quitó el netplay del template.
+- **Mouse look determinista.** Resuelto: el giro de cámara viaja dentro del input de cada frame (8 bits con signo para yaw y 8 para pitch, en pasos de `LOOK.step`), así que las replays y `sim` lo reproducen igual.
 
 ## Después de 0.1
 
