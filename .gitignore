@@ -1,5 +1,6 @@
 node_modules/
 dist/
-playtest/screenshots/
+.dotframe/
+.vercel/
 .DS_Store
 *.log

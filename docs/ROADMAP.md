@@ -19,11 +19,12 @@ Primer prototipo funcional. Todo lo de abajo vive en `apps/game`.
 ### Requisitos técnicos
 
 - Código modular y mantenible.
-- Movimiento independiente de FPS mediante delta time.
+- Movimiento independiente del FPS de pantalla: la sim de dotframe avanza a paso fijo de 60 Hz.
 - Sin assets comerciales ni APIs externas; sin backend ni autenticación.
-- Prioridad a fluidez y bajo consumo de recursos.
+- Prioridad a fluidez y bajo consumo de recursos (`dotframe perf`).
 - Sin frameworks de interfaz innecesarios.
-- `npm run build` pasa sin errores antes de cerrar la entrega.
+- `bun run typecheck`, `bun run test` y `bun run build` pasan antes de cerrar la entrega.
+- Una replay dorada por mecánica (movimiento con colisión, puñetazo, muerte del robot, reinicio).
 
 ### Criterios de aceptación
 
@@ -31,11 +32,16 @@ Primer prototipo funcional. Todo lo de abajo vive en `apps/game`.
 - [ ] Los puñetazos tienen animación y solo dañan enemigos dentro de su alcance.
 - [ ] El robot recibe daño, muestra una reacción visual y desaparece al llegar a cero de vida.
 - [ ] El juego se reinicia sin recargar la página.
-- [ ] El proyecto corre localmente con `npm run dev`.
+- [ ] El proyecto corre localmente con `bun run dev`.
 
 ### Fuera de alcance (todavía)
 
 Oleadas, múltiples enemigos, jefes, multijugador y cualquier función adicional.
+
+### Decisiones abiertas
+
+- **Colisiones 3D.** `dotframe/src/physics` solo resuelve cajas en un plano 2D. Para la oficina (paredes, escritorios, robot) la opción recomendada es colisión propia y determinista dentro de `step()`: el jugador como cilindro contra cajas alineadas a los ejes. Usar Rapier rompería el `save/restore` de la sim y los builds nativos.
+- **Plantilla de partida.** `apps/game` es el template `blank` (2D). La VS 0.1 lo reemplaza por una escena 3D (`createRenderer(platform.gpu)` y `run(..., { pointerLock: true })`, ver `dotframe skills get core` → "3D games"). Referencia de un FPS 3D hecho con dotframe: [the-ones-game](https://github.com/crafter-games/the-ones-game).
 
 ## Después de 0.1
 

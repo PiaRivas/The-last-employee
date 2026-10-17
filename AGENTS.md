@@ -4,36 +4,38 @@ Instructions for coding agents working on THE LAST EMPLOYEE. Humans: see README.
 
 ## What this is
 
-Browser FPS action comedy (Three.js + TypeScript + Vite + Rapier 3D). Monorepo with npm workspaces; the game is `apps/game`. Concept: `docs/CONCEPT.md`. Current scope and acceptance criteria: `docs/ROADMAP.md`. Build only what the current roadmap entry asks for, and leave anything listed as out of scope alone.
+Browser-first FPS action comedy built on **dotframe** (TypeScript engine with an agent-first CLI, deterministic fixed-step sim, WebGPU renderer). It's a Bun workspaces monorepo and the game lives in `apps/game`. Concept: `docs/CONCEPT.md`. Current scope and acceptance criteria: `docs/ROADMAP.md`. Build only what the current roadmap entry asks for.
 
-## Commands (run from the repo root)
+**Before touching the game, run `dotframe skills get core`.** For 3D, first person and pointer lock, the "3D games" section of that skill is the reference. Engine-specific guidance for this app: `apps/game/AGENTS.md`.
 
-- `npm install`: install all workspaces
-- `npm run dev`: dev server at http://localhost:5173 (extra args go to Vite: `npm run dev -- --port 4000`)
-- `npm run typecheck`: TypeScript only
-- `npm run build`: typecheck and production build. **It must pass before you report work as done.**
-- `npm run format`: Prettier
+## Commands (repo root)
+
+- `bun install`
+- `bun run sim`: headless 600-frame mash, JSON state and checksum
+- `bun run snap`: render frame 300 to `apps/game/.dotframe/snap-300.png`. Open it and look.
+- `bun run test`: golden replays (`apps/game/replays/*.json`)
+- `bun run typecheck` / `bun run build` / `bun run doctor`
+- `bun run dev`: serve the web build with rebuild on change
+
+Run other dotframe commands from `apps/game` (that's where `dotframe.json` lives) and pass `--json`.
 
 ## Hard constraints
 
-- Stack is fixed: Three.js, TypeScript strict, Vite, `@dimforge/rapier3d-compat`. Ask before adding any other runtime dependency.
-- No backend, no auth, no external APIs, no commercial assets. Use procedural geometry or CC0 assets, and credit them in `CREDITS.md`.
-- No UI frameworks: HUD and menus are DOM and CSS.
-- Frame-rate independent: scale all motion by delta time and clamp large deltas.
-- Performance first: low-poly, shared geometries and materials, few lights, dispose what you remove.
-
-## Architecture conventions
-
-- Keep `apps/game/src/main.ts` a thin bootstrap. Each system gets its own folder (`core/`, `physics/`, `world/`, `player/`, `enemy/`, `combat/`, `ui/`).
-- All gameplay tuning lives in one config module.
-- Rapier must be initialised (`await RAPIER.init()`) before any physics call.
-- Expose read-only game state on `window.__TEST__.state()` so Playwright playtests can assert on it. Pointer Lock can't be granted headless, so support a `?test=1` mode that simulates the lock.
+- The stack is dotframe on Bun. Ask before adding any runtime dependency. Physics or render libraries that break determinism, save/restore, or native builds (WASM, DOM-bound) are out.
+- Respect the Sim contract: state changes only in `step`, `render` only reads, use seeded RNG, and use `dotframe/src/detmath` in sim code. `dotframe doctor` must keep `sim:render` and `sim:math` OK.
+- No backend, auth, external APIs or commercial assets.
+- Performance first: low-poly, few lights. Check with `dotframe perf`.
 
 ## Verify before claiming done
 
-1. `npm run build` passes.
-2. Run the game (`npm run dev`), drive it with Playwright, check the console for errors, and look at a screenshot.
-3. Walk through the acceptance criteria in `docs/ROADMAP.md` and say which ones you verified and how.
+1. `bun run typecheck && bun run test && bun run build` pass.
+2. `bun run sim` state matches the intent. Snap the relevant frames and look at the PNGs.
+3. Walk the acceptance criteria in `docs/ROADMAP.md` and say which you verified and how.
+4. Record a replay for every new mechanic. If gameplay changed on purpose, re-record and say so.
+
+## Trust ladder
+
+`deploy`, `relay deploy` and `device install` are external: run `--dry-run`, show the plan, and wait for a human. Never add `--yes` yourself.
 
 ## Git
 

@@ -8,19 +8,18 @@
     "apps/*",
     "packages/*"
   ],
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
-    "dev": "npm run dev -w @tle/game --",
-    "build": "npm run build --workspaces --if-present",
-    "preview": "npm run preview -w @tle/game --",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "bun run --cwd apps/game dev",
+    "sim": "bun run --cwd apps/game sim",
+    "snap": "bun run --cwd apps/game snap",
+    "test": "bun run --cwd apps/game test",
+    "typecheck": "bun run --cwd apps/game typecheck",
+    "build": "bun run --cwd apps/game build",
+    "doctor": "bun run --cwd apps/game doctor",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "prettier": "^3.9.10",
-    "typescript": "~5.9"
+    "prettier": "^3.9.10"
   }
 }

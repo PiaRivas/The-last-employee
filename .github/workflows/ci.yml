@@ -8,12 +8,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run format:check
-      - run: npm run build
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run format:check
+      - run: bun run typecheck
+      # dotframe ships with the game's dependencies, so the CLI runs without a global install.
+      - name: Golden replays
+        working-directory: apps/game
+        run: bunx dotframe replay verify replays/*.json
+      - name: Build web
+        working-directory: apps/game
+        run: bunx dotframe build web

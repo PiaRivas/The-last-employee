@@ -1,7 +1,14 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["vite/client"]
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "types": ["@webgpu/types", "bun"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["*.ts", "src", "scripts"],
+  "exclude": ["main.native.ts", "main.ios.ts"]
 }

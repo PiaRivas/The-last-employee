@@ -1,20 +1,23 @@
 {
   "name": "@tle/game",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build --base ./",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "dev": "dotframe dev",
+    "sim": "dotframe sim --mash 7 --frames 600 --json",
+    "snap": "dotframe snap --frame 300 --mash 7 --out \"$PWD/.dotframe/snap-300.png\"",
+    "test": "dotframe replay verify replays/*.json",
+    "typecheck": "tsc",
+    "build": "dotframe build web",
+    "doctor": "dotframe doctor"
   },
   "dependencies": {
-    "@dimforge/rapier3d-compat": "^0.21.0",
-    "three": "^0.186.1"
+    "dotframe": "^0.3.6"
   },
   "devDependencies": {
-    "@types/three": "^0.186.0",
-    "vite": "^8.3.4"
-  }
+    "@types/bun": "^1.3.0",
+    "@webgpu/types": "^0.1.74",
+    "typescript": "^5.9.0"
+  },
+  "version": "0.0.0"
 }

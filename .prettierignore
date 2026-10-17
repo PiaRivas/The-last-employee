@@ -1,4 +1,7 @@
 node_modules/
 dist/
-package-lock.json
+.dotframe/
+.vercel/
+bun.lock
 playtest/screenshots/
+apps/game/replays/

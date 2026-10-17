@@ -1,0 +1,36 @@
+{
+  "name": "the-last-employee",
+  "sim": "sim.ts",
+  "targets": {
+    "web": {
+      "steps": [{ "label": "bundle (hashed)", "argv": ["bun", "scripts/build-web.ts"] }],
+      "out": "dist/web",
+      "deploy": {
+        "provider": "vercel",
+        "project": "the-last-employee",
+        "scope": "your-vercel-team"
+      }
+    },
+    "discord": {
+      "steps": [{ "label": "bundle (hashed)", "argv": ["bun", "scripts/build-web.ts"] }],
+      "out": "dist/web",
+      "deploy": {
+        "provider": "vercel",
+        "project": "the-last-employee",
+        "scope": "your-vercel-team"
+      }
+    },
+    "macos": { "native": { "platform": "macos", "entry": "main.native.ts" } },
+    "windows": { "native": { "platform": "windows", "entry": "main.native.ts" } },
+    "ios": {
+      "native": {
+        "platform": "ios",
+        "entry": "main.ios.ts",
+        "bundleId": "com.example.thelastemployee",
+        "team": "YOUR_TEAM_ID",
+        "orientation": "landscape"
+      }
+    }
+  },
+  "assets": { "localOnly": [] }
+}
