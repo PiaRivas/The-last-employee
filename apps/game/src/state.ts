@@ -24,6 +24,8 @@ export interface Player {
   // Frames left in the current dodge; 0 when not dodging.
   dodgeFrames: number;
   health: number;
+  // Frames left in the damage vignette; 0 when healthy.
+  hurtFrames: number;
 }
 
 export interface Enemy {
@@ -33,6 +35,8 @@ export interface Enemy {
   health: number;
   // Frames left in the hit reaction; 0 when idle.
   hitFrames: number;
+  // Frames until it can swing again.
+  cooldown: number;
   alive: boolean;
 }
 
@@ -44,6 +48,8 @@ export interface Fists {
 
 export interface Game {
   frame: number;
+  // The seed the run started with, so restart() replays the same run.
+  seed: number;
   // Seeded generator state (see rng.ts). Never use Math.random() in the sim.
   rng: number;
   phase: number;
@@ -55,12 +61,24 @@ export interface Game {
   held: number;
 }
 
+function freshEnemy(): Enemy {
+  return {
+    x: ENEMY.spawn.x,
+    z: ENEMY.spawn.z,
+    yaw: 0,
+    health: ENEMY.maxHealth,
+    hitFrames: 0,
+    cooldown: 0,
+    alive: true,
+  };
+}
+
 export function createGame(seed: number): Game {
   return {
     frame: 0,
+    seed: seed >>> 0,
     rng: seed >>> 0,
-    // VS 0.1 adds the title screen; until then a match starts playing.
-    phase: Phase.Playing,
+    phase: Phase.Title,
     player: {
       x: PLAYER.spawn.x,
       y: 0,
@@ -71,21 +89,22 @@ export function createGame(seed: number): Game {
       onGround: true,
       dodgeFrames: 0,
       health: PLAYER.maxHealth,
+      hurtFrames: 0,
     },
-    enemies: [
-      {
-        x: ENEMY.spawn.x,
-        z: ENEMY.spawn.z,
-        yaw: 0,
-        health: ENEMY.maxHealth,
-        hitFrames: 0,
-        alive: true,
-      },
-    ],
+    enemies: [freshEnemy()],
     fists: { left: 0, right: 0 },
     kills: 0,
     held: 0,
   };
+}
+
+// Restart without reloading: same seed, same run. Keeps the frame counter and held buttons so the press that
+// triggered the restart cannot also start the next run.
+export function reset(game: Game): void {
+  const fresh = createGame(game.seed);
+  fresh.frame = game.frame;
+  fresh.held = game.held;
+  restore(game, fresh);
 }
 
 function copyPlayer(p: Player): Player {
@@ -99,17 +118,27 @@ function copyPlayer(p: Player): Player {
     onGround: p.onGround,
     dodgeFrames: p.dodgeFrames,
     health: p.health,
+    hurtFrames: p.hurtFrames,
   };
 }
 
 function copyEnemy(e: Enemy): Enemy {
-  return { x: e.x, z: e.z, yaw: e.yaw, health: e.health, hitFrames: e.hitFrames, alive: e.alive };
+  return {
+    x: e.x,
+    z: e.z,
+    yaw: e.yaw,
+    health: e.health,
+    hitFrames: e.hitFrames,
+    cooldown: e.cooldown,
+    alive: e.alive,
+  };
 }
 
 // Field by field (scriptc compiles neither structuredClone nor Object.assign).
 export function snapshot(game: Game): Game {
   return {
     frame: game.frame,
+    seed: game.seed,
     rng: game.rng,
     phase: game.phase,
     player: copyPlayer(game.player),
@@ -122,6 +151,7 @@ export function snapshot(game: Game): Game {
 
 export function restore(game: Game, saved: Game): void {
   game.frame = saved.frame;
+  game.seed = saved.seed;
   game.rng = saved.rng;
   game.phase = saved.phase;
   game.player = copyPlayer(saved.player);
@@ -135,6 +165,7 @@ export function checksum(game: Game): number {
   const p = game.player;
   const sum = createChecksum()
     .add(game.frame)
+    .add(game.seed)
     .add(game.rng)
     .add(game.phase)
     .add(p.x)
@@ -146,6 +177,7 @@ export function checksum(game: Game): number {
     .add(p.onGround ? 1 : 0)
     .add(p.dodgeFrames)
     .add(p.health)
+    .add(p.hurtFrames)
     .add(game.fists.left)
     .add(game.fists.right)
     .add(game.kills)
@@ -157,6 +189,7 @@ export function checksum(game: Game): number {
       .add(e.yaw)
       .add(e.health)
       .add(e.hitFrames)
+      .add(e.cooldown)
       .add(e.alive ? 1 : 0);
   return sum.value();
 }

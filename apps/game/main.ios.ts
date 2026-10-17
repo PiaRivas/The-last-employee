@@ -6,13 +6,20 @@ import { openLibraryPlatform } from "dotframe/src/native/library";
 import { WINDOW } from "./src/game";
 import { createSfx } from "./src/audio/sfx";
 import { createSetup } from "./src/setup";
+import { createFonts } from "./src/ui/fonts";
 
 let tick: Frame | null = null;
 
 export function init(_base: string): void {
   const platform = openLibraryPlatform(WINDOW);
-  // No sounds on iOS yet: library mode has no promises, and loadSfx is async.
-  tick = createSetup({ mash: null, onProbe: (): void => {}, sfx: createSfx() })(platform);
+  // No sounds or fonts on iOS yet: library mode has no promises, and loadSfx/loadFonts are async.
+  tick = createSetup({
+    mash: null,
+    onProbe: (): void => {},
+    sfx: createSfx(),
+    fonts: createFonts(),
+    lockLost: (): boolean => false,
+  })(platform);
 }
 
 // Returns false to ask the host to quit.

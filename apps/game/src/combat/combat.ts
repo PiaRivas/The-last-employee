@@ -3,6 +3,7 @@ import { dcos, dhypot, dsin } from "dotframe/src/detmath";
 import { COMBAT, ENEMY } from "../config";
 import { Button } from "../input";
 import type { Game } from "../state";
+import { resolve } from "../world/collision";
 
 // pressed: buttons that went down this frame.
 export function stepCombat(game: Game, pressed: number): void {
@@ -37,4 +38,15 @@ function land(game: Game): void {
   if (!e) return;
   e.health -= COMBAT.damage;
   e.hitFrames = ENEMY.hitFrames;
+  // Knockback: shoved away from the player, not through walls (enemies reuse the same collision resolve).
+  const dx = e.x - p.x;
+  const dz = e.z - p.z;
+  const distance = dhypot(dx, dz) || 1;
+  const moved = resolve(
+    e.x + (dx / distance) * ENEMY.knockback,
+    e.z + (dz / distance) * ENEMY.knockback,
+    ENEMY.radius,
+  );
+  e.x = moved.x;
+  e.z = moved.z;
 }

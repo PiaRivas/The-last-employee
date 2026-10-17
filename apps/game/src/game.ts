@@ -3,15 +3,15 @@
 import type { Draw2D } from "dotframe/src/draw2d";
 import { stepCombat } from "./combat/combat";
 import { stepEnemies } from "./enemy/enemy";
-import { unpack } from "./input";
+import { Button, unpack } from "./input";
 import { stepPlayer } from "./player/player";
 import { sceneDraws, type Scene } from "./render/scene";
-import { type Game, Phase } from "./state";
+import { type Game, Phase, reset } from "./state";
 import { drawHud } from "./ui/hud";
 
 export { WINDOW } from "./config";
 export { encode, randomInput } from "./input";
-export { checksum, createGame, type Game, restore, snapshot } from "./state";
+export { checksum, createGame, type Game, reset, restore, snapshot } from "./state";
 
 // Single player for VS 0.1.
 export const PLAYERS = 1;
@@ -21,11 +21,37 @@ export function step(game: Game, inputs: number[]): void {
   const pressed = input.buttons & ~game.held;
   game.held = input.buttons;
   game.frame += 1;
-  // TODO(VS 0.1, UI): Title, Paused and Over flows (Button.Pause, restart without reloading).
-  if (game.phase !== Phase.Playing) return;
+  // Unlock only pauses; it never confirms a menu (a blur while paused must not resume).
+  const confirmed = pressed & ~Button.Unlock;
+
+  if (game.phase === Phase.Title) {
+    // Any action starts the shift.
+    if (confirmed !== 0) game.phase = Phase.Playing;
+    return;
+  }
+  if (game.phase === Phase.Paused) {
+    if (confirmed & Button.Restart) reset(game);
+    else if (confirmed !== 0) game.phase = Phase.Playing;
+    return;
+  }
+  if (game.phase === Phase.Over) {
+    if (confirmed !== 0) reset(game);
+    return;
+  }
+
+  // Playing.
+  if (confirmed & Button.Restart) {
+    reset(game);
+    return;
+  }
+  if (pressed & (Button.Pause | Button.Unlock)) {
+    game.phase = Phase.Paused;
+    return;
+  }
   stepPlayer(game, input);
-  stepCombat(game, pressed);
+  stepCombat(game, confirmed);
   stepEnemies(game);
+  if (game.player.health <= 0) game.phase = Phase.Over;
 }
 
 // A small summary for dotframe sim --json.

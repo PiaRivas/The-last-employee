@@ -1,6 +1,6 @@
 // First-person movement and look.
-import { dcos, dsin, wrapAngle } from "dotframe/src/detmath";
-import { PLAYER } from "../config";
+import { dcos, dhypot, dsin, wrapAngle } from "dotframe/src/detmath";
+import { ENEMY, PLAYER } from "../config";
 import { Button, type FrameInput } from "../input";
 import type { Game } from "../state";
 import { resolve } from "../world/collision";
@@ -23,9 +23,45 @@ export function stepPlayer(game: Game, input: FrameInput): void {
     dx *= Math.SQRT1_2;
     dz *= Math.SQRT1_2;
   }
-  const moved = resolve(p.x + dx * PLAYER.walkSpeed, p.z + dz * PLAYER.walkSpeed, PLAYER.radius);
+  // Dodge: a short dash in the current move direction, or forward when standing still.
+  if (b & Button.Dodge && p.dodgeFrames === 0 && p.onGround) {
+    p.dodgeFrames = PLAYER.dodgeFrames;
+    if (ahead === 0 && side === 0) {
+      dx = -s;
+      dz = -c;
+    }
+  }
+  const speed = PLAYER.walkSpeed * (p.dodgeFrames > 0 ? PLAYER.dodgeBoost : 1);
+  if (p.dodgeFrames > 0) p.dodgeFrames -= 1;
+  const moved = resolve(p.x + dx * speed, p.z + dz * speed, PLAYER.radius);
   p.x = moved.x;
   p.z = moved.z;
+  // Robots are obstacles too: never stand inside one (a punch at distance 0 cannot land).
+  for (const e of game.enemies) {
+    if (!e.alive) continue;
+    const ex = p.x - e.x;
+    const ez = p.z - e.z;
+    const min = PLAYER.radius + ENEMY.radius;
+    const d = dhypot(ex, ez);
+    if (d > 0 && d < min) {
+      p.x = e.x + (ex / d) * min;
+      p.z = e.z + (ez / d) * min;
+    }
+  }
 
-  // TODO(VS 0.1, jugador): jump (Button.Jump, p.vy, p.onGround) and dodge (Button.Dodge, p.dodgeFrames).
+  // Jump and gravity: the floor is y = 0.
+  if (p.onGround && b & Button.Jump) {
+    p.vy = PLAYER.jumpSpeed;
+    p.onGround = false;
+  }
+  if (!p.onGround) {
+    p.vy -= PLAYER.gravity;
+    p.y += p.vy;
+    if (p.y <= 0) {
+      p.y = 0;
+      p.vy = 0;
+      p.onGround = true;
+    }
+  }
+  if (p.hurtFrames > 0) p.hurtFrames -= 1;
 }

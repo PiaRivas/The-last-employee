@@ -8,15 +8,20 @@ import type { ProbeState } from "dotframe/src/probe";
 import { createSfx, loadSfx } from "./src/audio/sfx";
 import { WINDOW } from "./src/game";
 import { createSetup } from "./src/setup";
+import { createFonts, loadFonts } from "./src/ui/fonts";
 
 const mash = process.env.DOTFRAME_MASH ?? "";
 const probeFile = process.env.DOTFRAME_PROBE ?? "";
 let written = -1;
 const sfx = createSfx();
+const fonts = createFonts();
 
 const setup = createSetup({
   sfx,
+  fonts,
   mash: mash === "" ? null : Number(mash),
+  // Native releases the mouse on Escape, which arrives as the Pause button.
+  lockLost: (): boolean => false,
   onProbe: (state: ProbeState): void => {
     // Every 30 frames is enough for the CLI.
     if (probeFile === "" || state.frame - written < 30) return;
@@ -28,8 +33,9 @@ const setup = createSetup({
 // run() takes (platform: Platform) => Frame. Pass a function of exactly that type: scriptc cannot convert a function
 // value whose parameter type differs (setup takes the narrower SetupPlatform), though it can pass a wider argument.
 await run(WINDOW, (platform: Platform): Frame => {
-  void loadSfx(sfx, platform.audio, (path: string) =>
-    Promise.resolve(new Uint8Array(readFileSync(path))),
-  );
+  const load = (path: string): Promise<Uint8Array> =>
+    Promise.resolve(new Uint8Array(readFileSync(path)));
+  void loadSfx(sfx, platform.audio, load);
+  void loadFonts(fonts, platform.gpu, load);
   return setup(platform);
 });

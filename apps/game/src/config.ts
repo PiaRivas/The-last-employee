@@ -15,9 +15,17 @@ export const PLAYER = {
   radius: 0.35,
   // Walk speed, meters per frame.
   walkSpeed: 4.5 * STEP,
+  // Jump: upward speed and gravity, meters per frame and per frame squared.
+  jumpSpeed: 3.6 * STEP,
+  gravity: 9.8 * STEP * STEP,
+  // Dodge: duration in frames and speed multiplier while it lasts.
+  dodgeFrames: 14,
+  dodgeBoost: 2.6,
   // Pitch limit, so the view never flips over.
   maxPitch: 1.45,
   maxHealth: 100,
+  // Frames the damage vignette shows after taking a hit.
+  hurtFrames: 14,
 };
 
 export const LOOK = {
@@ -43,6 +51,15 @@ export const ENEMY = {
   hitFrames: 12,
   // Where the first robot stands for VS 0.1.
   spawn: { x: 0, z: -4 },
+  // Walk speed toward the player, meters per frame.
+  speed: 1.1 * STEP,
+  // Meters at which it stops and swings.
+  attackRange: 1.1,
+  // Damage per swing and the frames between swings.
+  attackDamage: 10,
+  attackCooldown: 55,
+  // Meters a punch knocks the robot back.
+  knockback: 0.45,
 };
 
 export const COMBAT = {

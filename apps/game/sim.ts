@@ -19,6 +19,8 @@ import {
 } from "./src/game";
 import { Button, LOOK_MAX, pack, toCount } from "./src/input";
 import { createScene } from "./src/render/scene";
+import { Phase } from "./src/state";
+import { decodeText, FAMILY } from "./src/ui/fonts";
 
 const NAMED: Record<string, number> = {
   jump: Button.Jump,
@@ -50,15 +52,29 @@ export default defineSim({
     let game: Game = createGame(1);
     // The 3D scene also builds on the headless stub GPU, so doctor's purity check runs the real render path.
     const scene = createScene(createRenderer(platform.gpu), game);
+    // snap draws through platform.draw: the HUD font registers there. Headless runs skip it.
+    let ready = Promise.resolve();
+    if (platform.draw && platform.image) {
+      const draw = platform.draw;
+      const image = platform.image;
+      ready = (async (): Promise<void> => {
+        const atlas = await image(await platform.load("assets/fonts/bangers.png"), true, true);
+        draw.addFont(
+          [FAMILY, "sans-serif"],
+          atlas,
+          decodeText(await platform.load("assets/fonts/bangers.json")),
+        );
+      })();
+    }
     return {
-      ready: Promise.resolve(),
+      ready,
       start: (seed: number): void => {
         game = createGame(seed);
       },
       step: (inputs: number[]): void => step(game, inputs),
       checksum: (): number => checksum(game),
       state: (): unknown => state(game),
-      over: (): boolean => false,
+      over: (): boolean => game.phase === Phase.Over,
       save: (): unknown => snapshot(game),
       restore: (saved: unknown): void => restore(game, saved as Game),
       inspect: (): unknown => game,

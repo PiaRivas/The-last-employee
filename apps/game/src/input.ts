@@ -1,5 +1,6 @@
 // One player's input for one frame, packed into a single number (what the sim, replays and netplay carry).
-// Bits 0-8 are buttons; bits 9-16 and 17-24 are the yaw and pitch turn as signed 8-bit counts of LOOK.step radians.
+// Bits 0-8 are buttons; bits 9-16 and 17-24 are the yaw and pitch turn as signed 8-bit counts of LOOK.step radians;
+// bit 25 is the restart button; bit 26 is the platform's "lost mouse capture/focus" signal (pauses, never confirms).
 import { LOOK } from "./config";
 
 export const Button = {
@@ -12,10 +13,14 @@ export const Button = {
   PunchLeft: 1 << 6,
   PunchRight: 1 << 7,
   Pause: 1 << 8,
+  Restart: 1 << 25,
+  Unlock: 1 << 26,
 };
 
 const YAW_SHIFT = 9;
 const PITCH_SHIFT = 17;
+// Button bits: the low nine plus Restart and Unlock.
+const BUTTON_MASK = 0x1ff | Button.Restart | Button.Unlock;
 // Largest look count per frame in either direction.
 export const LOOK_MAX = 127;
 
@@ -36,13 +41,15 @@ function fromByte(byte: number): number {
 
 export function pack(buttons: number, yawCount: number, pitchCount: number): number {
   return (
-    (buttons & 0x1ff) | ((yawCount & 0xff) << YAW_SHIFT) | ((pitchCount & 0xff) << PITCH_SHIFT)
+    (buttons & BUTTON_MASK) |
+    ((yawCount & 0xff) << YAW_SHIFT) |
+    ((pitchCount & 0xff) << PITCH_SHIFT)
   );
 }
 
 export function unpack(bits: number): FrameInput {
   return {
-    buttons: bits & 0x1ff,
+    buttons: bits & BUTTON_MASK,
     yaw: fromByte((bits >> YAW_SHIFT) & 0xff) * LOOK.step,
     pitch: fromByte((bits >> PITCH_SHIFT) & 0xff) * LOOK.step,
   };
@@ -60,6 +67,7 @@ export function encode(input: unknown): number {
     punchLeft?: boolean;
     punchRight?: boolean;
     pause?: boolean;
+    restart?: boolean;
     yaw?: number;
     pitch?: number;
   };
@@ -72,7 +80,8 @@ export function encode(input: unknown): number {
     (i.dodge ? Button.Dodge : 0) |
     (i.punchLeft ? Button.PunchLeft : 0) |
     (i.punchRight ? Button.PunchRight : 0) |
-    (i.pause ? Button.Pause : 0);
+    (i.pause ? Button.Pause : 0) |
+    (i.restart ? Button.Restart : 0);
   return pack(buttons, toCount(i.yaw ?? 0), toCount(i.pitch ?? 0));
 }
 

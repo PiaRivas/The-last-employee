@@ -12,6 +12,7 @@ import { createGame, type Game, randomInput, render, step, WINDOW } from "./game
 import { before, play, type Sfx } from "./audio/sfx";
 import { Button, pack, toCount } from "./input";
 import { createScene } from "./render/scene";
+import { type Fonts, register } from "./ui/fonts";
 
 export interface SetupOptions {
   // A seed makes the player a scripted masher (tests); null reads the keyboard and mouse.
@@ -21,6 +22,11 @@ export interface SetupOptions {
   onProbe: (state: ProbeState) => void;
   // Sound ids, filled in by the entry point as they load (see audio/sfx.ts).
   sfx: Sfx;
+  // Font atlas, filled in by the entry point once loaded (see ui/fonts.ts).
+  fonts: Fonts;
+  // True once when the platform loses mouse capture or focus (web: pointerlockchange, blur). Read and consumed
+  // each frame; a lost lock pauses the game. Required, not optional: scriptc cannot represent an optional function.
+  lockLost: () => boolean;
 }
 
 // What setup needs from a platform: the async web and native platforms and iOS's library platform all have it.
@@ -41,7 +47,8 @@ function buttons(input: Input): number {
     (input.down(Key.ShiftLeft) ? Button.Dodge : 0) |
     ((pointer.buttons & MouseButton.Left) !== 0 ? Button.PunchLeft : 0) |
     ((pointer.buttons & MouseButton.Right) !== 0 ? Button.PunchRight : 0) |
-    (input.down(Key.Escape) ? Button.Pause : 0)
+    (input.down(Key.Escape) ? Button.Pause : 0) |
+    (input.down(Key.R) ? Button.Restart : 0)
   );
 }
 
@@ -64,6 +71,7 @@ export function createSetup(options: SetupOptions): (platform: SetupPlatform) =>
     };
     const game: Game = createGame(Math.floor(Math.random() * 1e9));
     const scene = createScene(createRenderer(gpu), game);
+    let fontReady = false;
     const mash = options.mash === null ? null : createMasher(options.mash, randomInput);
     const probe = createProbe();
     let frame = 0;
@@ -82,7 +90,9 @@ export function createSetup(options: SetupOptions): (platform: SetupPlatform) =>
         const pitchCount = toCount(pitch);
         yaw -= yawCount * LOOK.step;
         pitch -= pitchCount * LOOK.step;
-        const bits = mash ? mash() : pack(buttons(input), yawCount, pitchCount);
+        // A dropped pointer lock or a blurred window pauses the game (its own bit: it pauses, never confirms).
+        const lost = options.lockLost() ? Button.Unlock : 0;
+        const bits = mash ? mash() : pack(buttons(input) | lost, yawCount, pitchCount);
         const was = before(game);
         step(game, [bits]);
         play(options.sfx, audio, was, game);
@@ -92,6 +102,7 @@ export function createSetup(options: SetupOptions): (platform: SetupPlatform) =>
         simulated += STEP;
       }
       fit();
+      if (!fontReady) fontReady = register(options.fonts, draw);
       draw.begin();
       draw.translate(offsetX, offsetY);
       render(game, draw, scene);
