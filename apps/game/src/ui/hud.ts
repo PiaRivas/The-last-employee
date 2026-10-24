@@ -57,10 +57,17 @@ export function drawHud(game: Game, draw: Draw2D): void {
     draw.setFillStyle("#e8453c");
     draw.fillRect(22, WINDOW.height - 34, 200 * health, 14);
 
-    // Kill counter, top right.
+    // Kill counter, top right; current squad, top left.
     draw.setFillStyle(ACCENT);
     text(draw, 34, "right");
     line(draw, `BOTS DESPEDIDOS: ${game.kills}`, WINDOW.width - 24, 30);
+    text(draw, 28, "left");
+    line(draw, `RONDA ${game.wave}`, 24, 30);
+    if (game.spawnTimer > 0) {
+      draw.setFillStyle(INK);
+      text(draw, 26, "center");
+      line(draw, "SE ACERCA MÁS PERSONAL...", CX, 60);
+    }
 
     // Damage vignette while hurtFrames lasts.
     if (game.player.hurtFrames > 0) {
@@ -91,6 +98,7 @@ export function drawHud(game: Game, draw: Draw2D): void {
   draw.setFillStyle(INK);
   text(draw, 34, "center");
   line(draw, `Bots despedidos: ${game.kills}`, CX, 280);
+  line(draw, `Ronda alcanzada: ${game.wave}`, CX, 320);
   draw.setFillStyle(ACCENT);
   text(draw, 32, "center");
   line(draw, "CLICK PARA APELAR", CX, 380);

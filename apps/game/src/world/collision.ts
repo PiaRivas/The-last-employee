@@ -1,6 +1,6 @@
 // Player against the office. Deterministic and inside step(): no physics library (see docs/ROADMAP.md, Decisiones
 // abiertas).
-import { OFFICE } from "../config";
+import { DOOR, OFFICE } from "../config";
 import { OFFICE_BOXES } from "./office";
 
 // Where a player cylinder of this radius ends up when it tries to stand at (x, z): pushed out of every solid box
@@ -23,5 +23,10 @@ export function resolve(x: number, z: number, radius: number): { x: number; z: n
   }
   const maxX = OFFICE.halfWidth - OFFICE.wallThickness / 2 - radius;
   const maxZ = OFFICE.halfDepth - OFFICE.wallThickness / 2 - radius;
-  return { x: Math.max(-maxX, Math.min(maxX, x)), z: Math.max(-maxZ, Math.min(maxZ, z)) };
+  // The room clamp lets the door corridor through: inside its width, z may pass the back wall.
+  const minZ =
+    Math.abs(x) <= DOOR.halfWidth + OFFICE.wallThickness
+      ? -(OFFICE.halfDepth + DOOR.corridorDepth - radius)
+      : -maxZ;
+  return { x: Math.max(-maxX, Math.min(maxX, x)), z: Math.max(minZ, Math.min(maxZ, z)) };
 }
