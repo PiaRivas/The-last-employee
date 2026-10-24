@@ -46,7 +46,8 @@ function buttons(input: Input): number {
     (input.down(Key.Space) ? Button.Jump : 0) |
     (input.down(Key.ShiftLeft) ? Button.Dodge : 0) |
     ((pointer.buttons & MouseButton.Left) !== 0 ? Button.PunchLeft : 0) |
-    ((pointer.buttons & MouseButton.Right) !== 0 ? Button.PunchRight : 0) |
+    // DOM reports the right button as bit 2, SDL as bit 4 (MouseButton.Right); accept both.
+    ((pointer.buttons & (MouseButton.Middle | MouseButton.Right)) !== 0 ? Button.PunchRight : 0) |
     (input.down(Key.Escape) ? Button.Pause : 0) |
     (input.down(Key.R) ? Button.Restart : 0)
   );
