@@ -64,6 +64,8 @@ export function state(game: Game): unknown {
     fists: game.fists,
     enemies: game.enemies.map((e) => ({ x: e.x, z: e.z, health: e.health, alive: e.alive })),
     kills: game.kills,
+    wave: game.wave,
+    spawnTimer: game.spawnTimer,
   };
 }
 

@@ -1,8 +1,11 @@
 // Robots.
 import { datan2, dhypot } from "dotframe/src/detmath";
-import { ENEMY, PLAYER } from "../config";
-import type { Game } from "../state";
+import { ENEMY, OFFICE, PLAYER } from "../config";
+import { type Game, squadEnemy } from "../state";
 import { resolve } from "../world/collision";
+
+// Inside the corridor the player is out of reach anyway: bots aim at the door first, then at the player.
+const DOOR_MOUTH_Z = -(OFFICE.halfDepth - OFFICE.wallThickness / 2);
 
 export function stepEnemies(game: Game): void {
   for (const e of game.enemies) {
@@ -14,13 +17,17 @@ export function stepEnemies(game: Game): void {
       game.kills += 1;
       continue;
     }
-    const dx = game.player.x - e.x;
-    const dz = game.player.z - e.z;
+    const inCorridor = e.z < DOOR_MOUTH_Z;
+    const tx = inCorridor ? 0 : game.player.x;
+    const tz = inCorridor ? -OFFICE.halfDepth + 2 : game.player.z;
+    const dx = tx - e.x;
+    const dz = tz - e.z;
     const distance = dhypot(dx, dz);
+    const toPlayer = dhypot(game.player.x - e.x, game.player.z - e.z);
     // Face the player (yaw 0 looks toward -z, the same convention as the player).
-    e.yaw = datan2(-dx, -dz);
-    if (distance > ENEMY.attackRange) {
-      // Walk toward the player; a hit staggers it for a few frames. Walls and desks still block.
+    e.yaw = datan2(-(game.player.x - e.x), -(game.player.z - e.z));
+    if (inCorridor || toPlayer > ENEMY.attackRange) {
+      // Walk toward the target; a hit staggers it for a few frames. Walls and desks still block.
       if (e.hitFrames === 0 && distance > 0) {
         const moved = resolve(
           e.x + (dx / distance) * ENEMY.speed,
@@ -49,6 +56,23 @@ export function stepEnemies(game: Game): void {
       e.cooldown = ENEMY.attackCooldown;
       game.player.health -= ENEMY.attackDamage;
       game.player.hurtFrames = PLAYER.hurtFrames;
+    }
+  }
+  // Endless squads: when the last bot drops, the next one starts filing through the door after a beat.
+  if (!game.enemies.some((e) => e.alive)) {
+    if (game.spawnTimer === 0) game.spawnTimer = ENEMY.waveDelay;
+    else if (--game.spawnTimer === 0) {
+      game.wave += 1;
+      game.enemies.forEach((e, i) => {
+        const fresh = squadEnemy(i);
+        e.x = fresh.x;
+        e.z = fresh.z;
+        e.yaw = fresh.yaw;
+        e.health = fresh.health;
+        e.hitFrames = 0;
+        e.cooldown = 0;
+        e.alive = true;
+      });
     }
   }
 }

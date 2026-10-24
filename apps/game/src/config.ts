@@ -43,20 +43,26 @@ export const OFFICE = {
   wallThickness: 0.2,
 };
 
+// The service door in the middle of the -z wall and the corridor behind it, where the bots queue.
+export const DOOR = {
+  // Half the gap's width: x from -1 to 1 stays open.
+  halfWidth: 1.0,
+  // Meters the corridor extends past the back wall (z goes down to -halfDepth - depth).
+  corridorDepth: 6,
+};
+
 export const ENEMY = {
   maxHealth: 100,
   // Half the robot's width, for punch reach.
   radius: 0.6,
   // Frames a robot flashes after a hit.
   hitFrames: 12,
-  // Where the skeleton robots stand for VS 0.1 (kept off the desks and the player's spawn).
-  spawns: [
-    { x: 0, z: -4 },
-    { x: -6, z: -2 },
-    { x: 6, z: -2 },
-    { x: -2, z: -8 },
-    { x: 2, z: -8 },
-  ],
+  // Bots per squad filing through the door; the next squad follows waveDelay frames after the last one drops.
+  waveSize: 5,
+  waveDelay: 90,
+  // Queue inside the corridor: x at the door, the first bot at spawnZ and each next spawnGap meters behind.
+  spawnZ: -11,
+  spawnGap: 1.0,
   // Walk speed toward the player, meters per frame.
   speed: 1.1 * STEP,
   // Meters at which it stops and swings.

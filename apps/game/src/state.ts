@@ -57,6 +57,9 @@ export interface Game {
   enemies: Enemy[];
   fists: Fists;
   kills: number;
+  // Current squad number, 1-based, and the countdown to the next squad entering through the door.
+  wave: number;
+  spawnTimer: number;
   // Buttons held last frame, to detect presses (button went from up to down).
   held: number;
 }
@@ -71,6 +74,11 @@ function freshEnemy(x: number, z: number): Enemy {
     cooldown: 0,
     alive: true,
   };
+}
+
+// A squad queued up in the door corridor: index 0 leads, the rest file in behind.
+export function squadEnemy(i: number): Enemy {
+  return freshEnemy(0, ENEMY.spawnZ - i * ENEMY.spawnGap);
 }
 
 export function createGame(seed: number): Game {
@@ -91,9 +99,11 @@ export function createGame(seed: number): Game {
       health: PLAYER.maxHealth,
       hurtFrames: 0,
     },
-    enemies: ENEMY.spawns.map((s) => freshEnemy(s.x, s.z)),
+    enemies: Array.from({ length: ENEMY.waveSize }, (_, i) => squadEnemy(i)),
     fists: { left: 0, right: 0 },
     kills: 0,
+    wave: 1,
+    spawnTimer: 0,
     held: 0,
   };
 }
@@ -145,6 +155,8 @@ export function snapshot(game: Game): Game {
     enemies: game.enemies.map(copyEnemy),
     fists: { left: game.fists.left, right: game.fists.right },
     kills: game.kills,
+    wave: game.wave,
+    spawnTimer: game.spawnTimer,
     held: game.held,
   };
 }
@@ -158,6 +170,8 @@ export function restore(game: Game, saved: Game): void {
   game.enemies = saved.enemies.map(copyEnemy);
   game.fists = { left: saved.fists.left, right: saved.fists.right };
   game.kills = saved.kills;
+  game.wave = saved.wave;
+  game.spawnTimer = saved.spawnTimer;
   game.held = saved.held;
 }
 
@@ -181,6 +195,8 @@ export function checksum(game: Game): number {
     .add(game.fists.left)
     .add(game.fists.right)
     .add(game.kills)
+    .add(game.wave)
+    .add(game.spawnTimer)
     .add(game.held);
   for (const e of game.enemies)
     sum
