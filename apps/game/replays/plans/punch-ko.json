@@ -1,0 +1,18 @@
+[
+  {"press": 2},
+  {"wait": 30},
+  {"look": [0, 1.0, -4]},
+  {"go": [0, 0]},
+  {"wait": 100},
+  {"press": 3},
+  {"wait": 26},
+  {"press": 3},
+  {"wait": 26},
+  {"press": 3},
+  {"wait": 26},
+  {"press": 3},
+  {"wait": 26},
+  {"press": 3},
+  {"wait": 30},
+  {"expect": "kills", "is": 1}
+]
