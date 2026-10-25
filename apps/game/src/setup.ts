@@ -23,7 +23,7 @@ import {
 import { before, play, type Sfx } from "./audio/sfx";
 import { Button, pack, toCount } from "./input";
 import { createScene } from "./render/scene";
-import { applyScreens, type Screens } from "./render/screens";
+import { applyLogos, applyScreens, type Screens } from "./render/screens";
 import { type Fonts, register } from "./ui/fonts";
 
 // A live relay connection, as connectRelay (web) or connectRelayNative (native) returns it.
@@ -87,13 +87,15 @@ export function createSetup(options: SetupOptions): (platform: SetupPlatform) =>
     let aspect = 0;
     let offsetX = 0;
     let offsetY = 0;
+    let logicalWidth = WINDOW.width;
+    let logicalHeight = WINDOW.height;
     const draw = createDraw2D(gpu, WINDOW.width, WINDOW.height);
     const fit = (): void => {
       const now = gpu.aspect();
       if (now === aspect) return;
       aspect = now;
-      const logicalWidth = Math.max(WINDOW.width, Math.round(WINDOW.height * aspect));
-      const logicalHeight = Math.max(WINDOW.height, Math.round(WINDOW.width / aspect));
+      logicalWidth = Math.max(WINDOW.width, Math.round(WINDOW.height * aspect));
+      logicalHeight = Math.max(WINDOW.height, Math.round(WINDOW.width / aspect));
       offsetX = (logicalWidth - WINDOW.width) / 2;
       offsetY = (logicalHeight - WINDOW.height) / 2;
       draw.resize(logicalWidth, logicalHeight);
@@ -102,6 +104,7 @@ export function createSetup(options: SetupOptions): (platform: SetupPlatform) =>
     const scene = createScene(createRenderer(gpu), game);
     let fontReady = false;
     let screensReady = false;
+    let logosReady = false;
     const mash = options.mash === null ? null : createMasher(options.mash, randomInput);
     const probe = createProbe();
     let frame = 0;
@@ -176,9 +179,18 @@ export function createSetup(options: SetupOptions): (platform: SetupPlatform) =>
         applyScreens(scene, options.screens.texture);
         screensReady = true;
       }
+      if (!logosReady && options.screens.logo) {
+        applyLogos(scene, options.screens.logo);
+        logosReady = true;
+      }
       draw.begin();
       draw.translate(offsetX, offsetY);
-      render(game, draw, scene, port, options.net?.status() ?? null);
+      render(game, draw, scene, port, options.net?.status() ?? null, {
+        width: logicalWidth,
+        height: logicalHeight,
+        offsetX,
+        offsetY,
+      });
       draw.resetTransform();
       draw.end({ r: 0.08, g: 0.08, b: 0.1 });
       return true;

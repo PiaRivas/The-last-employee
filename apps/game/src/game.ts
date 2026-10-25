@@ -5,9 +5,9 @@ import { stepCombat } from "./combat/combat";
 import { stepEnemies } from "./enemy/enemy";
 import { Button, unpack } from "./input";
 import { stepPlayer } from "./player/player";
-import { sceneDraws, type Scene } from "./render/scene";
+import { camera, sceneDraws, type Scene } from "./render/scene";
 import { type Game, Phase, reset } from "./state";
-import { drawHud } from "./ui/hud";
+import { drawHealthBars, drawHud, type Viewport } from "./ui/hud";
 
 export { WINDOW } from "./config";
 export { encode, randomInput } from "./input";
@@ -91,13 +91,16 @@ export function state(game: Game): unknown {
 }
 
 // localPort: which employee this screen controls (camera, fists, HUD). status: netplay link for the HUD, null local.
+// view: the logical canvas the scene fills (setup's letterbox), for projecting health bars into HUD space.
 export function render(
   game: Game,
   draw: Draw2D,
   scene: Scene,
   localPort = 0,
   status: string | null = null,
+  view?: Viewport,
 ): void {
   draw.scene(sceneDraws(scene, game, localPort));
   drawHud(game, draw, localPort, status);
+  if (view) drawHealthBars(game, draw, camera(game, localPort), view);
 }

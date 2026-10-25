@@ -26,6 +26,7 @@ export interface Box {
 const WALL: [number, number, number] = [0.78, 0.76, 0.7];
 const FLOOR: [number, number, number] = [0.32, 0.34, 0.38];
 const DESK: [number, number, number] = [0.55, 0.42, 0.3];
+const LEG: [number, number, number] = [0.42, 0.32, 0.22];
 const MONITOR: [number, number, number] = [0.08, 0.09, 0.1];
 const KEYS: [number, number, number] = [0.16, 0.17, 0.19];
 const CORRIDOR_WALL: [number, number, number] = [0.3, 0.31, 0.35];
@@ -40,7 +41,20 @@ const BEZEL_D = 0.05;
 
 function desk(x: number, z: number): Box[] {
   return [
-    { x, y: 0.375, z, w: 1.6, h: 0.75, d: 0.8, color: DESK, solid: true },
+    // A table now: a thin top (the same solid footprint, so collision does not change) on four legs.
+    { x, y: 0.72, z, w: 1.6, h: 0.06, d: 0.8, color: DESK, solid: true },
+    ...[-0.72, 0.72].flatMap((lx) =>
+      [-0.32, 0.32].map((lz): Box => ({
+        x: x + lx,
+        y: 0.345,
+        z: z + lz,
+        w: 0.08,
+        h: 0.69,
+        d: 0.08,
+        color: LEG,
+        solid: false,
+      })),
+    ),
     // The monitor: bezel, stand neck and foot, plus a keyboard. All decoration (never solid).
     {
       x,
@@ -189,6 +203,15 @@ export const OFFICE_BOXES: Box[] = [
 
 // The monitors' screens, textured by the renderer (one per desk).
 export const SCREENS: Screen[] = DESKS.map(([x, z]) => screen(x, z));
+
+// A smaller badge quad on the back of each monitor, facing -z.
+export const LOGOS: Screen[] = DESKS.map(([x, z]) => ({
+  x,
+  y: MONITOR_Y,
+  z: z + MONITOR_Z - BEZEL_D / 2 - 0.001,
+  w: 0.22,
+  h: 0.22,
+}));
 
 // Ceiling lamps, for the renderer.
 export const LAMPS: [number, number, number][] = [

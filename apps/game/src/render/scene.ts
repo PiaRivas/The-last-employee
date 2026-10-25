@@ -3,12 +3,12 @@
 import type { World } from "dotframe/src/ecs";
 import { createWorld, spawn } from "dotframe/src/ecs";
 import type { Draw } from "dotframe/src/gpu";
-import { type Vec3, vec3 } from "dotframe/src/math";
+import { lookAt, multiply, perspective, type Vec3, vec3 } from "dotframe/src/math";
 import type { Camera, Environment, Renderer } from "dotframe/src/render";
 import { box } from "dotframe/src/shapes";
 import { COMBAT, PLAYER } from "../config";
 import type { Game } from "../state";
-import { LAMPS, OFFICE_BOXES, SCREENS } from "../world/office";
+import { LAMPS, LOGOS, OFFICE_BOXES, SCREENS } from "../world/office";
 import { screenMesh } from "./screens";
 
 export interface Scene {
@@ -22,6 +22,8 @@ export interface Scene {
   avatars: number[][];
   // The monitors' screen quads; applyScreens() textures them once the image loads.
   screens: number[];
+  // The logo badges on the monitor backs; applyLogos() textures them.
+  logos: number[];
   // Each entity's own size, so a hidden mesh (scale 0) can come back.
   sizes: Map<number, Vec3>;
 }
@@ -149,6 +151,13 @@ export function createScene(renderer: Renderer, game: Game): Scene {
   const screens = SCREENS.map((s) =>
     add(world, sizes, panel, SCREEN_OFF, vec3(s.x, s.y, s.z), vec3(s.w, s.h, 1)),
   );
+  // The badge quad is the same mesh turned around so its face points out the monitor's back.
+  const logos = LOGOS.map((s) => {
+    const entity = add(world, sizes, panel, SCREEN_OFF, vec3(s.x, s.y, s.z), vec3(s.w, s.h, 1));
+    const t = world.transforms.get(entity);
+    if (t) t.rotation = vec3(0, Math.PI, 0);
+    return entity;
+  });
   const environment: Environment = {
     ambient: vec3(0.35, 0.36, 0.4),
     sun: { direction: vec3(0.3, 1, 0.2), color: vec3(0.55, 0.55, 0.5) },
@@ -158,7 +167,7 @@ export function createScene(renderer: Renderer, game: Game): Scene {
       range: 9,
     })),
   };
-  return { renderer, world, environment, robots, fists, avatars, screens, sizes };
+  return { renderer, world, environment, robots, fists, avatars, screens, logos, sizes };
 }
 
 function place(
@@ -192,6 +201,29 @@ export function camera(game: Game, localPort: number): Camera {
     near: 0.05,
     far: 60,
   };
+}
+
+// The same matrix renderer.draws builds for the camera (projection * view), so the HUD can project
+// world points into the same frame.
+export function viewProjection(cam: Camera, aspect: number): Float32Array {
+  return multiply(
+    perspective(cam.fovY, aspect, cam.near ?? 0.1, cam.far ?? 100),
+    lookAt(cam.eye, cam.target, vec3(0, 1, 0)),
+  );
+}
+
+// World point to normalized device coords (-1..1); depth is the view distance. Null behind the eye.
+export function project(
+  vp: Float32Array,
+  x: number,
+  y: number,
+  z: number,
+): { x: number; y: number; depth: number } | null {
+  const cx = vp[0] * x + vp[4] * y + vp[8] * z + vp[12];
+  const cy = vp[1] * x + vp[5] * y + vp[9] * z + vp[13];
+  const w = vp[3] * x + vp[7] * y + vp[11] * z + vp[15];
+  if (w <= 0.001) return null;
+  return { x: cx / w, y: cy / w, depth: w };
 }
 
 // The scene's draws for this frame, to queue under the HUD.

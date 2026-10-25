@@ -39,15 +39,20 @@ window.addEventListener("blur", () => {
 // screen image land, so a session that opened during a rebuild does not stay silent and dark forever.
 let loading = false;
 const keepLoading = (platform: Platform): void => {
-  if (loading || (fonts.atlas !== null && sfx.swing >= 0 && screens.texture !== null)) return;
+  if (
+    loading ||
+    (fonts.atlas !== null && sfx.swing >= 0 && screens.texture !== null && screens.logo !== null)
+  )
+    return;
   loading = true;
   void (async (): Promise<void> => {
     if (sfx.swing < 0) await loadSfx(sfx, platform.audio, loadBytes);
     if (fonts.atlas === null) await loadFonts(fonts, platform.gpu, loadBytes);
-    if (screens.texture === null) await loadScreens(screens, platform.gpu, loadBytes);
+    if (screens.texture === null || screens.logo === null)
+      await loadScreens(screens, platform.gpu, loadBytes);
   })().then(() => {
     loading = false;
-    if (fonts.atlas === null || sfx.swing < 0 || screens.texture === null)
+    if (fonts.atlas === null || sfx.swing < 0 || screens.texture === null || screens.logo === null)
       setTimeout(() => keepLoading(platform), 250);
   });
 };

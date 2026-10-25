@@ -19,7 +19,7 @@ import {
 } from "./src/game";
 import { Button, LOOK_MAX, pack, toCount } from "./src/input";
 import { createScene } from "./src/render/scene";
-import { applyScreens } from "./src/render/screens";
+import { applyLogos, applyScreens } from "./src/render/screens";
 import { Phase } from "./src/state";
 import { decodeText, FAMILY } from "./src/ui/fonts";
 
@@ -65,10 +65,14 @@ export default defineSim({
           atlas,
           decodeText(await platform.load("assets/fonts/bangers.json")),
         );
-        // The monitors' image, so snaps show what a player sees.
+        // The monitors' images, so snaps show what a player sees.
         applyScreens(
           scene,
           await image(await platform.load("assets/screens/code.png"), true, true),
+        );
+        applyLogos(
+          scene,
+          await image(await platform.load("assets/screens/anthropic.png"), true, true),
         );
       })();
     }
@@ -84,7 +88,13 @@ export default defineSim({
       save: (): unknown => snapshot(game),
       restore: (saved: unknown): void => restore(game, saved as Game),
       inspect: (): unknown => game,
-      render: (draw) => render(game, draw, scene),
+      render: (draw) =>
+        render(game, draw, scene, 0, null, {
+          width: WINDOW.width,
+          height: WINDOW.height,
+          offsetX: 0,
+          offsetY: 0,
+        }),
       pose: () => ({
         x: game.players[0].x,
         y: game.players[0].y + PLAYER.eyeHeight,

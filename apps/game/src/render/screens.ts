@@ -7,26 +7,36 @@ import { vec3 } from "dotframe/src/math";
 import type { Scene } from "./scene";
 
 const PNG = "assets/screens/code.png";
+const LOGO = "assets/screens/anthropic.png";
 
 export interface Screens {
   texture: Texture | null;
+  logo: Texture | null;
 }
 
 export function createScreens(): Screens {
-  return { texture: null };
+  return { texture: null, logo: null };
 }
 
-// A missing image never stops the game; screens just stay dark.
+// A missing image never stops the game; screens just stay dark. Each asset loads on its own so one
+// 404 does not take the other down.
 export async function loadScreens(
   screens: Screens,
   gpu: Gpu,
   load: (path: string) => Promise<Uint8Array>,
 ): Promise<void> {
-  try {
-    screens.texture = await gpu.createImage(await load(PNG), true, true);
-  } catch (error) {
-    console.warn("screens:", error);
-  }
+  if (screens.texture === null)
+    try {
+      screens.texture = await gpu.createImage(await load(PNG), true, true);
+    } catch (error) {
+      console.warn("screens:", error);
+    }
+  if (screens.logo === null)
+    try {
+      screens.logo = await gpu.createImage(await load(LOGO), true, true);
+    } catch (error) {
+      console.warn("screens:", error);
+    }
 }
 
 // A 1x1 quad in the XY plane (z = 0) facing +z, with UVs covering the whole texture. The back faces are
@@ -54,5 +64,18 @@ export function applyScreens(scene: Scene, texture: Texture): void {
     mesh.texture = texture;
     mesh.color = vec3(1, 1, 1);
     mesh.emissive = 0.8;
+  }
+}
+
+// Same for the logo badges on the monitor backs; alphaCutoff drops the PNG's transparent background
+// so the badge floats on the dark bezel.
+export function applyLogos(scene: Scene, texture: Texture): void {
+  for (const entity of scene.logos) {
+    const mesh = scene.world.meshes.get(entity);
+    if (!mesh) continue;
+    mesh.texture = texture;
+    mesh.color = vec3(1, 1, 1);
+    mesh.emissive = 0.8;
+    mesh.alphaCutoff = 0.5;
   }
 }

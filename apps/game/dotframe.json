@@ -32,5 +32,5 @@
       }
     }
   },
-  "assets": { "localOnly": [] }
+  "assets": { "localOnly": ["assets/screens/anthropic.png"] }
 }

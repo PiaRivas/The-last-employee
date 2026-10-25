@@ -2,13 +2,56 @@
 // Coordinates are WINDOW's logical pixels. Text needs the font registered (see ui/fonts.ts); without it nothing
 // is drawn, which headless sims and early frames survive fine.
 import type { Draw2D } from "dotframe/src/draw2d";
-import { PLAYER, WINDOW } from "../config";
+import type { Camera } from "dotframe/src/render";
+import { ENEMY, PLAYER, WINDOW } from "../config";
+import { project, viewProjection } from "../render/scene";
 import { type Game, Phase } from "../state";
 
 const CX = WINDOW.width / 2;
 const CY = WINDOW.height / 2;
 const INK = "#f5ead9";
 const ACCENT = "#f0a13a";
+
+// The logical canvas the 3D scene fills, plus the HUD's letterbox offset into it (setup's fit()).
+export interface Viewport {
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+// The little health bar floating over each robot's head.
+const BAR = {
+  alpha: 0.4,
+  // A real-world bar 0.5 m wide, so it shrinks with distance like any other geometry.
+  width: 0.5,
+  heightRatio: 0.12,
+  // World height of the bar: just above the robot's skull (its head tops out near 1.45 m).
+  overHead: 1.62,
+};
+
+// One translucent bar per live robot, projected under its head anchor. World-sized, so squads far
+// down the office show thin slivers instead of full bars.
+export function drawHealthBars(game: Game, draw: Draw2D, cam: Camera, view: Viewport): void {
+  if (game.phase !== Phase.Playing) return;
+  const aspect = view.width / view.height;
+  const vp = viewProjection(cam, aspect);
+  const tan = Math.tan(cam.fovY / 2);
+  for (const e of game.enemies) {
+    if (!e.alive) continue;
+    const p = project(vp, e.x, BAR.overHead, e.z);
+    if (!p) continue;
+    const sx = ((p.x + 1) / 2) * view.width - view.offsetX;
+    const sy = ((1 - p.y) / 2) * view.height - view.offsetY;
+    const w = Math.max(8, Math.min(120, (BAR.width * view.width) / (2 * p.depth * tan * aspect)));
+    const h = Math.max(2, w * BAR.heightRatio);
+    const hp = Math.max(0, e.health) / ENEMY.maxHealth;
+    draw.setFillStyle(`rgba(8, 10, 14, ${BAR.alpha})`);
+    draw.fillRect(sx - w / 2 - 1, sy - h / 2 - 1, w + 2, h + 2);
+    draw.setFillStyle(`rgba(232, 69, 60, ${BAR.alpha})`);
+    draw.fillRect(sx - w / 2, sy - h / 2, w * hp, h);
+  }
+}
 
 function text(draw: Draw2D, size: number, align: string): void {
   draw.setFont(`${size}px Bangers, sans-serif`);
