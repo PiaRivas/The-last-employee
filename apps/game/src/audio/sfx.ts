@@ -33,9 +33,14 @@ export async function loadSfx(
   load: (path: string) => Promise<Uint8Array>,
 ): Promise<void> {
   try {
-    for (const path of FILES.hits) sfx.hits.push(await audio.loadSound(await load(path)));
-    sfx.ko = await audio.loadSound(await load(FILES.ko));
-    sfx.swing = await audio.loadSound(await load(FILES.swing));
+    // Publish atomically: a retry after a mid-load 404 must not leave hits half-pushed.
+    const hits: number[] = [];
+    for (const path of FILES.hits) hits.push(await audio.loadSound(await load(path)));
+    const ko = await audio.loadSound(await load(FILES.ko));
+    const swing = await audio.loadSound(await load(FILES.swing));
+    sfx.hits = hits;
+    sfx.ko = ko;
+    sfx.swing = swing;
   } catch (error) {
     // A missing sound never stops the game.
     console.warn("sfx:", error);
@@ -44,25 +49,27 @@ export async function loadSfx(
 
 // What play() compares: the few numbers that say something happened.
 export interface Before {
-  left: number;
-  right: number;
+  punches: { left: number; right: number }[];
   health: number[];
   alive: boolean[];
+  playerHealth: number[];
 }
 
 export function before(game: Game): Before {
   return {
-    left: game.fists.left,
-    right: game.fists.right,
+    punches: game.players.map((p) => ({ left: p.punchLeft, right: p.punchRight })),
     health: game.enemies.map((e) => e.health),
     alive: game.enemies.map((e) => e.alive),
+    playerHealth: game.players.map((p) => p.health),
   };
 }
 
 export function play(sfx: Sfx, audio: AudioPlayer, was: Before, game: Game): void {
-  const thrown =
-    (game.fists.left === COMBAT.punchFrames && was.left !== COMBAT.punchFrames) ||
-    (game.fists.right === COMBAT.punchFrames && was.right !== COMBAT.punchFrames);
+  const thrown = game.players.some(
+    (p, i) =>
+      (p.punchLeft === COMBAT.punchFrames && (was.punches[i]?.left ?? 0) !== COMBAT.punchFrames) ||
+      (p.punchRight === COMBAT.punchFrames && (was.punches[i]?.right ?? 0) !== COMBAT.punchFrames),
+  );
   if (thrown && sfx.swing >= 0) audio.play(sfx.swing, 0.25, 1.4);
   game.enemies.forEach((e, i: number): void => {
     const health = was.health[i] ?? e.health;
@@ -72,5 +79,13 @@ export function play(sfx: Sfx, audio: AudioPlayer, was: Before, game: Game): voi
       if (hit >= 0) audio.play(hit, 0.9, 0.92 + Math.random() * 0.16);
     }
     if (was.alive[i] === true && !e.alive && sfx.ko >= 0) audio.play(sfx.ko, 1, 1);
+  });
+  // A player taking damage sounds the same as a robot taking it.
+  game.players.forEach((p, i: number): void => {
+    const health = was.playerHealth[i] ?? p.health;
+    if (p.health < health && sfx.hits.length > 0) {
+      const hit = sfx.hits[(game.frame + 1) % sfx.hits.length] ?? -1;
+      if (hit >= 0) audio.play(hit, 0.7, 0.9);
+    }
   });
 }

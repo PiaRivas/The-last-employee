@@ -1,11 +1,25 @@
-// Robots.
+// The robot: walks at the nearest living employee through the door, swings when close, flashes when hit.
 import { datan2, dhypot } from "dotframe/src/detmath";
 import { ENEMY, OFFICE, PLAYER } from "../config";
-import { type Game, squadEnemy } from "../state";
+import { type Game, type Player, squadEnemy } from "../state";
 import { resolve } from "../world/collision";
 
-// Inside the corridor the player is out of reach anyway: bots aim at the door first, then at the player.
+// Inside the corridor the players are out of reach anyway: bots aim at the door first, then at a player.
 const DOOR_MOUTH_Z = -(OFFICE.halfDepth - OFFICE.wallThickness / 2);
+
+function nearest(game: Game, x: number, z: number): Player | null {
+  let best: Player | null = null;
+  let bestD = Infinity;
+  for (const p of game.players) {
+    if (!p.active || p.health <= 0) continue;
+    const d = dhypot(p.x - x, p.z - z);
+    if (d < bestD) {
+      bestD = d;
+      best = p;
+    }
+  }
+  return best;
+}
 
 export function stepEnemies(game: Game): void {
   for (const e of game.enemies) {
@@ -17,16 +31,16 @@ export function stepEnemies(game: Game): void {
       game.kills += 1;
       continue;
     }
+    const prey = nearest(game, e.x, e.z);
     const inCorridor = e.z < DOOR_MOUTH_Z;
-    const tx = inCorridor ? 0 : game.player.x;
-    const tz = inCorridor ? -OFFICE.halfDepth + 2 : game.player.z;
+    const tx = inCorridor ? 0 : (prey?.x ?? 0);
+    const tz = inCorridor ? -OFFICE.halfDepth + 2 : (prey?.z ?? 0);
     const dx = tx - e.x;
     const dz = tz - e.z;
     const distance = dhypot(dx, dz);
-    const toPlayer = dhypot(game.player.x - e.x, game.player.z - e.z);
-    // Face the player (yaw 0 looks toward -z, the same convention as the player).
-    e.yaw = datan2(-(game.player.x - e.x), -(game.player.z - e.z));
-    if (inCorridor || toPlayer > ENEMY.attackRange) {
+    // Face the prey (yaw 0 looks toward -z, the same convention as the players).
+    if (prey) e.yaw = datan2(-(prey.x - e.x), -(prey.z - e.z));
+    if (inCorridor || !prey || dhypot(prey.x - e.x, prey.z - e.z) > ENEMY.attackRange) {
       // Walk toward the target; a hit staggers it for a few frames. Walls and desks still block.
       if (e.hitFrames === 0 && distance > 0) {
         const moved = resolve(
@@ -37,25 +51,22 @@ export function stepEnemies(game: Game): void {
         e.x = moved.x;
         e.z = moved.z;
       }
-      // Robots don't merge: push neighbors apart.
-      for (const other of game.enemies) {
-        if (other === e || !other.alive) continue;
-        const sx = e.x - other.x;
-        const sz = e.z - other.z;
-        const min = ENEMY.radius * 2;
+      // Separate stacked robots so the squad does not merge into one blob.
+      for (const o of game.enemies) {
+        if (o === e || !o.alive) continue;
+        const sx = e.x - o.x;
+        const sz = e.z - o.z;
         const d = dhypot(sx, sz);
+        const min = ENEMY.radius * 2;
         if (d > 0 && d < min) {
-          const push = (min - d) / 2;
-          e.x += (sx / d) * push;
-          e.z += (sz / d) * push;
-          other.x -= (sx / d) * push;
-          other.z -= (sz / d) * push;
+          e.x += (sx / d) * (min - d) * 0.5;
+          e.z += (sz / d) * (min - d) * 0.5;
         }
       }
-    } else if (e.cooldown === 0 && game.player.health > 0) {
+    } else if (e.cooldown === 0 && prey.health > 0) {
       e.cooldown = ENEMY.attackCooldown;
-      game.player.health -= ENEMY.attackDamage;
-      game.player.hurtFrames = PLAYER.hurtFrames;
+      prey.health -= ENEMY.attackDamage;
+      prey.hurtFrames = PLAYER.hurtFrames;
     }
   }
   // Endless squads: when the last bot drops, the next one starts filing through the door after a beat.

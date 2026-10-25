@@ -26,6 +26,13 @@ export interface Player {
   health: number;
   // Frames left in the damage vignette; 0 when healthy.
   hurtFrames: number;
+  // Frames left in each punch; 0 when the fist is ready.
+  punchLeft: number;
+  punchRight: number;
+  // Buttons held last frame, to detect presses (button went from up to down).
+  held: number;
+  // False removes the player from the match: it neither acts, renders, nor can be hit (solo mode's absent port).
+  active: boolean;
 }
 
 export interface Enemy {
@@ -40,12 +47,6 @@ export interface Enemy {
   alive: boolean;
 }
 
-export interface Fists {
-  // Frames left in each punch; 0 when the fist is ready.
-  left: number;
-  right: number;
-}
-
 export interface Game {
   frame: number;
   // The seed the run started with, so restart() replays the same run.
@@ -53,15 +54,16 @@ export interface Game {
   // Seeded generator state (see rng.ts). Never use Math.random() in the sim.
   rng: number;
   phase: number;
-  player: Player;
+  // 1 when two humans fight each other (netplay), 0 for a lone employee.
+  duel: number;
+  players: Player[];
   enemies: Enemy[];
-  fists: Fists;
   kills: number;
   // Current squad number, 1-based, and the countdown to the next squad entering through the door.
   wave: number;
   spawnTimer: number;
-  // Buttons held last frame, to detect presses (button went from up to down).
-  held: number;
+  // Port that won the match, -1 while it runs or when the bots won.
+  winner: number;
 }
 
 function freshEnemy(x: number, z: number): Enemy {
@@ -81,39 +83,51 @@ export function squadEnemy(i: number): Enemy {
   return freshEnemy(0, ENEMY.spawnZ - i * ENEMY.spawnGap);
 }
 
-export function createGame(seed: number): Game {
+function freshPlayer(i: number, active: boolean): Player {
+  const spawn = PLAYER.spawns[i] ?? PLAYER.spawns[0];
+  return {
+    x: spawn.x,
+    y: 0,
+    z: spawn.z,
+    yaw: spawn.yaw,
+    pitch: 0,
+    vy: 0,
+    onGround: true,
+    dodgeFrames: 0,
+    health: PLAYER.maxHealth,
+    hurtFrames: 0,
+    punchLeft: 0,
+    punchRight: 0,
+    held: 0,
+    active,
+  };
+}
+
+export function createGame(seed: number, duel: boolean): Game {
   return {
     frame: 0,
     seed: seed >>> 0,
     rng: seed >>> 0,
     phase: Phase.Title,
-    player: {
-      x: PLAYER.spawn.x,
-      y: 0,
-      z: PLAYER.spawn.z,
-      yaw: PLAYER.spawn.yaw,
-      pitch: 0,
-      vy: 0,
-      onGround: true,
-      dodgeFrames: 0,
-      health: PLAYER.maxHealth,
-      hurtFrames: 0,
-    },
+    duel: duel ? 1 : 0,
+    players: [freshPlayer(0, true), freshPlayer(1, duel)],
     enemies: Array.from({ length: ENEMY.waveSize }, (_, i) => squadEnemy(i)),
-    fists: { left: 0, right: 0 },
     kills: 0,
     wave: 1,
     spawnTimer: 0,
-    held: 0,
+    winner: -1,
   };
 }
 
 // Restart without reloading: same seed, same run. Keeps the frame counter and held buttons so the press that
 // triggered the restart cannot also start the next run.
 export function reset(game: Game): void {
-  const fresh = createGame(game.seed);
+  const fresh = createGame(game.seed, game.duel === 1);
   fresh.frame = game.frame;
-  fresh.held = game.held;
+  game.players.forEach((p, i) => {
+    const fp = fresh.players[i];
+    if (fp) fp.held = p.held;
+  });
   restore(game, fresh);
 }
 
@@ -129,6 +143,10 @@ function copyPlayer(p: Player): Player {
     dodgeFrames: p.dodgeFrames,
     health: p.health,
     hurtFrames: p.hurtFrames,
+    punchLeft: p.punchLeft,
+    punchRight: p.punchRight,
+    held: p.held,
+    active: p.active,
   };
 }
 
@@ -151,13 +169,13 @@ export function snapshot(game: Game): Game {
     seed: game.seed,
     rng: game.rng,
     phase: game.phase,
-    player: copyPlayer(game.player),
+    duel: game.duel,
+    players: game.players.map(copyPlayer),
     enemies: game.enemies.map(copyEnemy),
-    fists: { left: game.fists.left, right: game.fists.right },
     kills: game.kills,
     wave: game.wave,
     spawnTimer: game.spawnTimer,
-    held: game.held,
+    winner: game.winner,
   };
 }
 
@@ -166,38 +184,42 @@ export function restore(game: Game, saved: Game): void {
   game.seed = saved.seed;
   game.rng = saved.rng;
   game.phase = saved.phase;
-  game.player = copyPlayer(saved.player);
+  game.duel = saved.duel;
+  game.players = saved.players.map(copyPlayer);
   game.enemies = saved.enemies.map(copyEnemy);
-  game.fists = { left: saved.fists.left, right: saved.fists.right };
   game.kills = saved.kills;
   game.wave = saved.wave;
   game.spawnTimer = saved.spawnTimer;
-  game.held = saved.held;
+  game.winner = saved.winner;
 }
 
 export function checksum(game: Game): number {
-  const p = game.player;
   const sum = createChecksum()
     .add(game.frame)
     .add(game.seed)
     .add(game.rng)
     .add(game.phase)
-    .add(p.x)
-    .add(p.y)
-    .add(p.z)
-    .add(p.yaw)
-    .add(p.pitch)
-    .add(p.vy)
-    .add(p.onGround ? 1 : 0)
-    .add(p.dodgeFrames)
-    .add(p.health)
-    .add(p.hurtFrames)
-    .add(game.fists.left)
-    .add(game.fists.right)
+    .add(game.duel)
     .add(game.kills)
     .add(game.wave)
     .add(game.spawnTimer)
-    .add(game.held);
+    .add(game.winner);
+  for (const p of game.players)
+    sum
+      .add(p.x)
+      .add(p.y)
+      .add(p.z)
+      .add(p.yaw)
+      .add(p.pitch)
+      .add(p.vy)
+      .add(p.onGround ? 1 : 0)
+      .add(p.dodgeFrames)
+      .add(p.health)
+      .add(p.hurtFrames)
+      .add(p.punchLeft)
+      .add(p.punchRight)
+      .add(p.held)
+      .add(p.active ? 1 : 0);
   for (const e of game.enemies)
     sum
       .add(e.x)

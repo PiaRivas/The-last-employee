@@ -5,6 +5,7 @@ import type { Frame } from "dotframe/src/gpu";
 import { openLibraryPlatform } from "dotframe/src/native/library";
 import { WINDOW } from "./src/game";
 import { createSfx } from "./src/audio/sfx";
+import { createScreens } from "./src/render/screens";
 import { createSetup } from "./src/setup";
 import { createFonts } from "./src/ui/fonts";
 
@@ -12,13 +13,17 @@ let tick: Frame | null = null;
 
 export function init(_base: string): void {
   const platform = openLibraryPlatform(WINDOW);
-  // No sounds or fonts on iOS yet: library mode has no promises, and loadSfx/loadFonts are async.
+  // No sounds, fonts or screen images on iOS yet: library mode has no promises, and the loaders are async.
   tick = createSetup({
     mash: null,
     onProbe: (): void => {},
     sfx: createSfx(),
     fonts: createFonts(),
+    screens: createScreens(),
     lockLost: (): boolean => false,
+    duel: false,
+    net: null,
+    seed: Math.floor(Math.random() * 1e9),
   })(platform);
 }
 

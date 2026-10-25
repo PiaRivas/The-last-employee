@@ -19,6 +19,7 @@ import {
 } from "./src/game";
 import { Button, LOOK_MAX, pack, toCount } from "./src/input";
 import { createScene } from "./src/render/scene";
+import { applyScreens } from "./src/render/screens";
 import { Phase } from "./src/state";
 import { decodeText, FAMILY } from "./src/ui/fonts";
 
@@ -33,7 +34,7 @@ export default defineSim({
   players: PLAYERS,
   window: WINDOW,
   clear: { r: 0.08, g: 0.08, b: 0.1 },
-  options: {},
+  options: { duel: true },
   neutral: 0,
   rollbackWindow: 20,
   encode,
@@ -49,7 +50,7 @@ export default defineSim({
     },
   },
   create: (platform: SimPlatform): SimRun => {
-    let game: Game = createGame(1);
+    let game: Game = createGame(1, true);
     // The 3D scene also builds on the headless stub GPU, so doctor's purity check runs the real render path.
     const scene = createScene(createRenderer(platform.gpu), game);
     // snap draws through platform.draw: the HUD font registers there. Headless runs skip it.
@@ -64,12 +65,17 @@ export default defineSim({
           atlas,
           decodeText(await platform.load("assets/fonts/bangers.json")),
         );
+        // The monitors' image, so snaps show what a player sees.
+        applyScreens(
+          scene,
+          await image(await platform.load("assets/screens/code.png"), true, true),
+        );
       })();
     }
     return {
       ready,
-      start: (seed: number): void => {
-        game = createGame(seed);
+      start: (seed: number, options: Record<string, unknown>): void => {
+        game = createGame(seed, options.duel === true);
       },
       step: (inputs: number[]): void => step(game, inputs),
       checksum: (): number => checksum(game),
@@ -80,11 +86,11 @@ export default defineSim({
       inspect: (): unknown => game,
       render: (draw) => render(game, draw, scene),
       pose: () => ({
-        x: game.player.x,
-        y: game.player.y + PLAYER.eyeHeight,
-        z: game.player.z,
-        yaw: game.player.yaw,
-        pitch: game.player.pitch,
+        x: game.players[0].x,
+        y: game.players[0].y + PLAYER.eyeHeight,
+        z: game.players[0].z,
+        yaw: game.players[0].yaw,
+        pitch: game.players[0].pitch,
       }),
     };
   },

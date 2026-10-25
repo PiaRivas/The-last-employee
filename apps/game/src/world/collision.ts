@@ -23,10 +23,18 @@ export function resolve(x: number, z: number, radius: number): { x: number; z: n
   }
   const maxX = OFFICE.halfWidth - OFFICE.wallThickness / 2 - radius;
   const maxZ = OFFICE.halfDepth - OFFICE.wallThickness / 2 - radius;
-  // The room clamp lets the door corridor through: inside its width, z may pass the back wall.
-  const minZ =
-    Math.abs(x) <= DOOR.halfWidth + OFFICE.wallThickness
-      ? -(OFFICE.halfDepth + DOOR.corridorDepth - radius)
-      : -maxZ;
-  return { x: Math.max(-maxX, Math.min(maxX, x)), z: Math.max(minZ, Math.min(maxZ, z)) };
+  let minX = -maxX;
+  let hiX = maxX;
+  let minZ = -maxZ;
+  let hiZ = maxZ;
+  // Doorways let an axis past the room wall while the point is inside the gap's width:
+  // the bot corridor (-z), port 0's alcove (+z) and port 1's alcove (-x). The corridor
+  // walls themselves bound the other axis.
+  const slack = DOOR.halfWidth + OFFICE.wallThickness;
+  if (Math.abs(x) <= slack) {
+    minZ = -(OFFICE.halfDepth + DOOR.corridorDepth - radius);
+    hiZ = OFFICE.halfDepth + DOOR.playerDepth - radius;
+  }
+  if (Math.abs(z) <= slack) minX = -(OFFICE.halfWidth + DOOR.playerDepth - radius);
+  return { x: Math.max(minX, Math.min(hiX, x)), z: Math.max(minZ, Math.min(hiZ, z)) };
 }

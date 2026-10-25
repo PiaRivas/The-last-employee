@@ -25,7 +25,10 @@ function overlay(draw: Draw2D): void {
   draw.fillRect(0, 0, WINDOW.width, WINDOW.height);
 }
 
-export function drawHud(game: Game, draw: Draw2D): void {
+// status: netplay link state ("paired", "waiting", "connecting"); null when playing local.
+export function drawHud(game: Game, draw: Draw2D, port: number, status: string | null): void {
+  const me = game.players[port] ?? game.players[0];
+  const rival = game.players.find((_, i) => i !== port);
   if (game.phase === Phase.Title) {
     overlay(draw);
     draw.setFillStyle(ACCENT);
@@ -38,9 +41,15 @@ export function drawHud(game: Game, draw: Draw2D): void {
     text(draw, 26, "center");
     line(draw, "WASD moverse · Mouse mirar · Click izq/der golpear", CX, 330);
     line(draw, "Espacio saltar · Shift esquivar · Esc pausa", CX, 362);
-    draw.setFillStyle(ACCENT);
-    text(draw, 36, "center");
-    line(draw, "CLICK PARA FICHAR", CX, 450);
+    if (status !== null && status !== "paired") {
+      draw.setFillStyle(ACCENT);
+      text(draw, 32, "center");
+      line(draw, "ESPERANDO AL OTRO EMPLEADO...", CX, 450);
+    } else {
+      draw.setFillStyle(ACCENT);
+      text(draw, 36, "center");
+      line(draw, "CLICK PARA FICHAR", CX, 450);
+    }
     return;
   }
 
@@ -51,7 +60,7 @@ export function drawHud(game: Game, draw: Draw2D): void {
     draw.fillRect(CX - 8, CY - 1, 16, 2);
 
     // Health bar, bottom left.
-    const health = Math.max(0, game.player.health) / PLAYER.maxHealth;
+    const health = Math.max(0, me.health) / PLAYER.maxHealth;
     draw.setFillStyle("#00000099");
     draw.fillRect(20, WINDOW.height - 36, 204, 18);
     draw.setFillStyle("#e8453c");
@@ -69,11 +78,21 @@ export function drawHud(game: Game, draw: Draw2D): void {
       line(draw, "SE ACERCA MÁS PERSONAL...", CX, 60);
     }
 
+    // The rival's health, top center, while they are in the match.
+    if (game.duel === 1 && rival && rival.active) {
+      const rhealth = Math.max(0, rival.health) / PLAYER.maxHealth;
+      text(draw, 22, "center");
+      draw.setFillStyle(INK);
+      line(draw, "RIVAL", CX, 24);
+      draw.setFillStyle("#00000099");
+      draw.fillRect(CX - 102, 34, 204, 14);
+      draw.setFillStyle("#e8453c");
+      draw.fillRect(CX - 100, 36, 200 * rhealth, 10);
+    }
+
     // Damage vignette while hurtFrames lasts.
-    if (game.player.hurtFrames > 0) {
-      draw.setFillStyle(
-        `rgba(200, 30, 20, ${0.35 * (game.player.hurtFrames / PLAYER.hurtFrames)})`,
-      );
+    if (me.hurtFrames > 0) {
+      draw.setFillStyle(`rgba(200, 30, 20, ${0.35 * (me.hurtFrames / PLAYER.hurtFrames)})`);
       draw.fillRect(0, 0, WINDOW.width, WINDOW.height);
     }
     return;
@@ -92,9 +111,10 @@ export function drawHud(game: Game, draw: Draw2D): void {
 
   // Phase.Over.
   overlay(draw);
-  draw.setFillStyle("#e8453c");
+  const won = game.duel === 1 && game.winner === port;
+  draw.setFillStyle(won ? ACCENT : "#e8453c");
   text(draw, 84, "center");
-  line(draw, "DESPEDIDO", CX, 190);
+  line(draw, won ? "TE QUEDASTE" : "DESPEDIDO", CX, 190);
   draw.setFillStyle(INK);
   text(draw, 34, "center");
   line(draw, `Bots despedidos: ${game.kills}`, CX, 280);
