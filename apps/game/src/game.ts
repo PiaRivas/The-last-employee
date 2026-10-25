@@ -13,16 +13,21 @@ export { WINDOW } from "./config";
 export { encode, randomInput } from "./input";
 export { checksum, createGame, type Game, reset, restore, snapshot } from "./state";
 
-// Single player for VS 0.1.
-export const PLAYERS = 1;
+// Two ports: one employee each. In solo mode port 1 is not active.
+export const PLAYERS = 2;
 
 export function step(game: Game, inputs: number[]): void {
-  const input = unpack(inputs[0] ?? 0);
-  const pressed = input.buttons & ~game.held;
-  game.held = input.buttons;
+  const ins = game.players.map((_, i) => unpack(inputs[i] ?? 0));
+  // pressed: buttons that went down this frame, per player.
+  const pressed = ins.map((input, i) => {
+    const p = game.players[i];
+    const down = p ? input.buttons & ~p.held : 0;
+    if (p) p.held = input.buttons;
+    return down;
+  });
   game.frame += 1;
-  // Unlock only pauses; it never confirms a menu (a blur while paused must not resume).
-  const confirmed = pressed & ~Button.Unlock;
+  // Any port's action counts for menus; Unlock only pauses, it never confirms.
+  const confirmed = pressed.reduce((all, p) => all | (p & ~Button.Unlock), 0);
 
   if (game.phase === Phase.Title) {
     // Any action starts the shift.
@@ -44,32 +49,49 @@ export function step(game: Game, inputs: number[]): void {
     reset(game);
     return;
   }
-  if (pressed & (Button.Pause | Button.Unlock)) {
+  if (pressed.some((p) => (p & (Button.Pause | Button.Unlock)) !== 0)) {
     game.phase = Phase.Paused;
     return;
   }
-  stepPlayer(game, input);
-  stepCombat(game, confirmed);
+  game.players.forEach((p, i) => {
+    if (!p.active) return;
+    stepPlayer(game, p, ins[i]);
+    stepCombat(game, p, pressed[i] ?? 0);
+  });
   stepEnemies(game);
-  if (game.player.health <= 0) game.phase = Phase.Over;
+  const standing = game.players.find((p) => p.active && p.health > 0);
+  const fallen = game.players.some((p) => p.active && p.health <= 0);
+  if (fallen) {
+    game.winner = standing ? game.players.indexOf(standing) : -1;
+    game.phase = Phase.Over;
+  }
 }
 
 // A small summary for dotframe sim --json.
 export function state(game: Game): unknown {
-  const p = game.player;
   return {
     frame: game.frame,
     phase: game.phase,
-    player: { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health },
-    fists: game.fists,
+    duel: game.duel,
+    players: game.players.map((p) => ({
+      x: p.x,
+      y: p.y,
+      z: p.z,
+      yaw: p.yaw,
+      pitch: p.pitch,
+      health: p.health,
+      active: p.active,
+    })),
     enemies: game.enemies.map((e) => ({ x: e.x, z: e.z, health: e.health, alive: e.alive })),
     kills: game.kills,
     wave: game.wave,
     spawnTimer: game.spawnTimer,
+    winner: game.winner,
   };
 }
 
-export function render(game: Game, draw: Draw2D, scene: Scene): void {
-  draw.scene(sceneDraws(scene, game));
-  drawHud(game, draw);
+// localPort: which employee this screen controls (camera, fists, HUD). status: netplay link for the HUD, null local.
+export function render(game: Game, draw: Draw2D, scene: Scene, localPort = 0, status: string | null = null): void {
+  draw.scene(sceneDraws(scene, game, localPort));
+  drawHud(game, draw, localPort, status);
 }

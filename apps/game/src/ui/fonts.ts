@@ -45,9 +45,11 @@ export async function loadFonts(
   load: (path: string) => Promise<Uint8Array>,
 ): Promise<void> {
   try {
-    const atlas = await gpu.createImage(await load(PNG), true, true);
+    // Fetch both files before touching the GPU: if the metrics fetch 404s mid-retry, no texture is leaked.
+    const png = await load(PNG);
     const metrics = decodeText(await load(METRICS));
     JSON.parse(metrics); // addFont parses it later; reject a bad file here instead of inside the frame loop
+    const atlas = await gpu.createImage(png, true, true);
     fonts.metrics = metrics;
     fonts.atlas = atlas;
   } catch (error) {

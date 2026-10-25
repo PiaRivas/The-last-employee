@@ -7,6 +7,7 @@ import type { Platform } from "dotframe/src/platform";
 import type { ProbeState } from "dotframe/src/probe";
 import { createSfx, loadSfx } from "./src/audio/sfx";
 import { WINDOW } from "./src/game";
+import { createScreens, loadScreens } from "./src/render/screens";
 import { createSetup } from "./src/setup";
 import { createFonts, loadFonts } from "./src/ui/fonts";
 
@@ -15,13 +16,18 @@ const probeFile = process.env.DOTFRAME_PROBE ?? "";
 let written = -1;
 const sfx = createSfx();
 const fonts = createFonts();
+const screens = createScreens();
 
 const setup = createSetup({
   sfx,
   fonts,
+  screens,
   mash: mash === "" ? null : Number(mash),
   // Native releases the mouse on Escape, which arrives as the Pause button.
   lockLost: (): boolean => false,
+  duel: false,
+  net: null,
+  seed: Math.floor(Math.random() * 1e9),
   onProbe: (state: ProbeState): void => {
     // Every 30 frames is enough for the CLI.
     if (probeFile === "" || state.frame - written < 30) return;
@@ -37,5 +43,6 @@ await run(WINDOW, (platform: Platform): Frame => {
     Promise.resolve(new Uint8Array(readFileSync(path)));
   void loadSfx(sfx, platform.audio, load);
   void loadFonts(fonts, platform.gpu, load);
+  void loadScreens(screens, platform.gpu, load);
   return setup(platform);
 });

@@ -2,11 +2,11 @@
 import { dcos, dhypot, dsin, wrapAngle } from "dotframe/src/detmath";
 import { ENEMY, PLAYER } from "../config";
 import { Button, type FrameInput } from "../input";
-import type { Game } from "../state";
+import type { Game, Player } from "../state";
 import { resolve } from "../world/collision";
 
-export function stepPlayer(game: Game, input: FrameInput): void {
-  const p = game.player;
+export function stepPlayer(game: Game, p: Player, input: FrameInput): void {
+  if (p.health <= 0) return;
   p.yaw = wrapAngle(p.yaw + input.yaw);
   p.pitch = Math.max(-PLAYER.maxPitch, Math.min(PLAYER.maxPitch, p.pitch + input.pitch));
 
@@ -46,6 +46,18 @@ export function stepPlayer(game: Game, input: FrameInput): void {
     if (d > 0 && d < min) {
       p.x = e.x + (ex / d) * min;
       p.z = e.z + (ez / d) * min;
+    }
+  }
+  // Same for the other player.
+  for (const q of game.players) {
+    if (q === p || !q.active || q.health <= 0) continue;
+    const qx = p.x - q.x;
+    const qz = p.z - q.z;
+    const min = PLAYER.radius * 2;
+    const d = dhypot(qx, qz);
+    if (d > 0 && d < min) {
+      p.x = q.x + (qx / d) * min;
+      p.z = q.z + (qz / d) * min;
     }
   }
 

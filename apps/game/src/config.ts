@@ -7,8 +7,12 @@ export const WINDOW = { width: 960, height: 540, title: "THE LAST EMPLOYEE" };
 export const STEP = 1 / 60;
 
 export const PLAYER = {
-  // Spawn point and initial view (yaw 0 looks toward -z).
-  spawn: { x: 0, z: 6, yaw: 0 },
+  // One spawn per port, just inside each player's own door (yaw 0 looks toward -z).
+  // Port 0 enters through the +z wall, port 1 through the -x wall facing +x.
+  spawns: [
+    { x: 0, z: 8.6, yaw: 0 },
+    { x: -8.6, z: 0, yaw: -Math.PI / 2 },
+  ],
   // Eye height above the floor.
   eyeHeight: 1.6,
   // Collision radius of the player cylinder (used by world collision).
@@ -49,6 +53,9 @@ export const DOOR = {
   halfWidth: 1.0,
   // Meters the corridor extends past the back wall (z goes down to -halfDepth - depth).
   corridorDepth: 6,
+  // The players' own entrances: port 0 comes in through the +z wall, port 1 through the -x wall.
+  // Short alcoves, 2 m deep, with the same gap and lintel as the service door.
+  playerDepth: 2,
 };
 
 export const ENEMY = {
@@ -78,6 +85,8 @@ export const COMBAT = {
   // Reach of a punch, meters from the eye.
   reach: 1.4,
   damage: 25,
+  // A punch on the rival employee: half a robot's swing (ENEMY.attackDamage / 2).
+  playerDamage: 5,
   // Frames a punch takes from start to ready again.
   punchFrames: 18,
   // Frames from the click to the moment the fist lands (the fist is furthest out at punchFrames / 2).
