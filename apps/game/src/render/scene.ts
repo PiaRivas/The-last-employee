@@ -24,6 +24,8 @@ export interface Scene {
   screens: number[];
   // The logo badges on the monitor backs; applyLogos() textures them.
   logos: number[];
+  // One logo badge per robot, on the chest at heart height; same texture as the monitor backs.
+  chests: number[];
   // Each entity's own size, so a hidden mesh (scale 0) can come back.
   sizes: Map<number, Vec3>;
 }
@@ -63,6 +65,9 @@ const ROBOT_PARTS: Part[] = [
   { at: [-0.11, HEAD_Y + 0.04, -0.26], size: [0.08, 0.1, 0.04], eye: true },
   { at: [0.11, HEAD_Y + 0.04, -0.26], size: [0.08, 0.1, 0.04], eye: true },
 ];
+
+// The Claude badge on the chest: heart height, floating just past the ribs' front faces (-0.375).
+const CHEST = { at: vec3(0, 0.85, -0.4), size: 0.11 };
 
 const FIST = vec3(0.86, 0.67, 0.53);
 
@@ -158,6 +163,10 @@ export function createScene(renderer: Renderer, game: Game): Scene {
     if (t) t.rotation = vec3(0, Math.PI, 0);
     return entity;
   });
+  // One chest badge per robot, posed with its body every frame.
+  const chests = game.enemies.map(() =>
+    add(world, sizes, panel, SCREEN_OFF, vec3(0, 0, 0), vec3(CHEST.size, CHEST.size, 1)),
+  );
   const environment: Environment = {
     ambient: vec3(0.35, 0.36, 0.4),
     sun: { direction: vec3(0.3, 1, 0.2), color: vec3(0.55, 0.55, 0.5) },
@@ -167,7 +176,7 @@ export function createScene(renderer: Renderer, game: Game): Scene {
       range: 9,
     })),
   };
-  return { renderer, world, environment, robots, fists, avatars, screens, logos, sizes };
+  return { renderer, world, environment, robots, fists, avatars, screens, logos, chests, sizes };
 }
 
 function place(
@@ -254,6 +263,22 @@ export function sceneDraws(scene: Scene, game: Game, localPort: number): Draw[] 
         e.alive,
       );
     });
+    // The chest badge follows the body (its +z face turned to the robot's -z front).
+    const chest = scene.chests[i];
+    if (chest !== undefined) {
+      place(
+        scene,
+        chest,
+        vec3(
+          e.x + c * CHEST.at.x + sn * CHEST.at.z,
+          CHEST.at.y * squash,
+          e.z - sn * CHEST.at.x + c * CHEST.at.z,
+        ),
+        e.yaw + Math.PI,
+        0,
+        e.alive,
+      );
+    }
   });
 
   // The rival employees: visible to each other's screen only (never the local player's own body).

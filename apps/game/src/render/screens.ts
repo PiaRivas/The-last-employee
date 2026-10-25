@@ -67,10 +67,10 @@ export function applyScreens(scene: Scene, texture: Texture): void {
   }
 }
 
-// Same for the logo badges on the monitor backs; alphaCutoff drops the PNG's transparent background
-// so the badge floats on the dark bezel.
+// Same for the logo badges on the monitor backs and the robots' chests; alphaCutoff drops the PNG's
+// transparent background so the badge floats on the surface.
 export function applyLogos(scene: Scene, texture: Texture): void {
-  for (const entity of scene.logos) {
+  for (const entity of [...scene.logos, ...scene.chests]) {
     const mesh = scene.world.meshes.get(entity);
     if (!mesh) continue;
     mesh.texture = texture;
