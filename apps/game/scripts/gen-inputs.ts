@@ -39,20 +39,40 @@ function run(targets: { x: number; z: number }[], maxFrames: number): number[][]
     step(game, inputs[inputs.length - 1]);
     if (game.players[1].health <= 0) punches += 1;
   }
-  console.log("frames:", inputs.length, "phase:", game.phase, "winner:", game.winner, "p2hp:", game.players[1].health);
+  console.log(
+    "frames:",
+    inputs.length,
+    "phase:",
+    game.phase,
+    "winner:",
+    game.winner,
+    "p2hp:",
+    game.players[1].health,
+  );
   return inputs;
 }
 
 // P0 walks out its door, turns left, walks on: the same path look-walk used to cover.
-const walk = run([{ x: 0, z: 2 }, { x: -5, z: 2 }, { x: -5, z: -5 }], 420);
+const walk = run(
+  [
+    { x: 0, z: 2 },
+    { x: -5, z: 2 },
+    { x: -5, z: -5 },
+  ],
+  420,
+);
 writeFileSync(
   "replays/inputs/look-walk.jsonl",
   walk.map((i) => JSON.stringify(i)).join("\n") + "\n",
 );
 
 // P0 crosses the office to port 1's door and punches it out: covers PvP damage, winner and game over.
-const ko = run([{ x: -4, z: 2.5 }, { x: -7.5, z: 0.5 }, { x: -8.6, z: 0 }], 3600);
-writeFileSync(
-  "replays/inputs/pvp-ko.jsonl",
-  ko.map((i) => JSON.stringify(i)).join("\n") + "\n",
+const ko = run(
+  [
+    { x: -4, z: 2.5 },
+    { x: -7.5, z: 0.5 },
+    { x: -8.6, z: 0 },
+  ],
+  3600,
 );
+writeFileSync("replays/inputs/pvp-ko.jsonl", ko.map((i) => JSON.stringify(i)).join("\n") + "\n");

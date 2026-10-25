@@ -21,8 +21,7 @@ const hashRoom = (s: string): number => {
   for (let i = 0; i < s.length; i++) h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0;
   return h;
 };
-const seed =
-  room === null ? Math.floor(Math.random() * 1e9) : hashRoom(room);
+const seed = room === null ? Math.floor(Math.random() * 1e9) : hashRoom(room);
 
 // fit: "window" fills the browser window; pointerLock captures the mouse on click for first-person look.
 const sfx = createSfx();
@@ -64,10 +63,7 @@ const setup = createSetup({
     return was;
   },
   duel: link !== null,
-  net:
-    link === null
-      ? null
-      : { port: link.slot, status: link.status, transport: link.transport },
+  net: link === null ? null : { port: link.slot, status: link.status, transport: link.transport },
   seed,
 });
 await run(

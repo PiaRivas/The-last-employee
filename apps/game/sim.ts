@@ -66,7 +66,10 @@ export default defineSim({
           decodeText(await platform.load("assets/fonts/bangers.json")),
         );
         // The monitors' image, so snaps show what a player sees.
-        applyScreens(scene, await image(await platform.load("assets/screens/code.png"), true, true));
+        applyScreens(
+          scene,
+          await image(await platform.load("assets/screens/code.png"), true, true),
+        );
       })();
     }
     return {

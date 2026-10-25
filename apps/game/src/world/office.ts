@@ -42,9 +42,27 @@ function desk(x: number, z: number): Box[] {
   return [
     { x, y: 0.375, z, w: 1.6, h: 0.75, d: 0.8, color: DESK, solid: true },
     // The monitor: bezel, stand neck and foot, plus a keyboard. All decoration (never solid).
-    { x, y: MONITOR_Y, z: z + MONITOR_Z, w: 0.62, h: 0.42, d: BEZEL_D, color: MONITOR, solid: false },
+    {
+      x,
+      y: MONITOR_Y,
+      z: z + MONITOR_Z,
+      w: 0.62,
+      h: 0.42,
+      d: BEZEL_D,
+      color: MONITOR,
+      solid: false,
+    },
     { x, y: 0.8, z: z + MONITOR_Z, w: 0.06, h: 0.1, d: 0.06, color: MONITOR, solid: false },
-    { x, y: 0.765, z: z + MONITOR_Z + 0.05, w: 0.3, h: 0.03, d: 0.22, color: MONITOR, solid: false },
+    {
+      x,
+      y: 0.765,
+      z: z + MONITOR_Z + 0.05,
+      w: 0.3,
+      h: 0.03,
+      d: 0.22,
+      color: MONITOR,
+      solid: false,
+    },
     { x, y: 0.765, z: z + 0.12, w: 0.5, h: 0.03, d: 0.17, color: KEYS, solid: false },
   ];
 }
@@ -100,7 +118,16 @@ export const OFFICE_BOXES: Box[] = [
   // The +z wall, split around port 0's door; its alcove behind.
   { x: -(doorX + hw) / 2, y: wh / 2, z: hd, w: hw - doorX, h: wh, d: t, color: WALL, solid: true },
   { x: (doorX + hw) / 2, y: wh / 2, z: hd, w: hw - doorX, h: wh, d: t, color: WALL, solid: true },
-  { x: 0, y: (doorTop + wh) / 2, z: hd, w: corridorW, h: wh - doorTop, d: t, color: WALL, solid: false },
+  {
+    x: 0,
+    y: (doorTop + wh) / 2,
+    z: hd,
+    w: corridorW,
+    h: wh - doorTop,
+    d: t,
+    color: WALL,
+    solid: false,
+  },
   { x: 0, y: doorTop - 0.25, z: hd - t, w: 0.7, h: 0.28, d: 0.06, color: EXIT_SIGN, solid: false },
   { x: 0, y: -0.05, z: p1Z, w: corridorW, h: 0.1, d: pd, color: CORRIDOR_FLOOR, solid: false },
   { x: -(doorX + t / 2), y: wh / 2, z: p1Z, w: t, h: wh, d: pd, color: CORRIDOR_WALL, solid: true },
@@ -109,7 +136,16 @@ export const OFFICE_BOXES: Box[] = [
   // The -x wall, split around port 1's door; its alcove behind.
   { x: -hw, y: wh / 2, z: -(doorX + hd) / 2, w: t, h: wh, d: hd - doorX, color: WALL, solid: true },
   { x: -hw, y: wh / 2, z: (doorX + hd) / 2, w: t, h: wh, d: hd - doorX, color: WALL, solid: true },
-  { x: -hw, y: (doorTop + wh) / 2, z: 0, w: t, h: wh - doorTop, d: corridorW, color: WALL, solid: false },
+  {
+    x: -hw,
+    y: (doorTop + wh) / 2,
+    z: 0,
+    w: t,
+    h: wh - doorTop,
+    d: corridorW,
+    color: WALL,
+    solid: false,
+  },
   { x: -hw + t, y: doorTop - 0.25, z: 0, w: 0.06, h: 0.28, d: 0.7, color: EXIT_SIGN, solid: false },
   { x: p2X, y: -0.05, z: 0, w: pd, h: 0.1, d: corridorW, color: CORRIDOR_FLOOR, solid: false },
   { x: p2X, y: wh / 2, z: -(doorX + t / 2), w: pd, h: wh, d: t, color: CORRIDOR_WALL, solid: true },

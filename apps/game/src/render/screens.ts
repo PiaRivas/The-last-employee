@@ -34,8 +34,8 @@ export async function loadScreens(
 export function screenMesh(): MeshData {
   // Corners: top-left, top-right, bottom-right, bottom-left; v = 0 is the image's top edge.
   const positions = new Float32Array([
-    -0.5, 0.5, 0, 0.5, 0.5, 0, 0.5, -0.5, 0, -0.5, -0.5, 0, -0.5, 0.5, 0, 0.5, 0.5, 0, 0.5, -0.5, 0, -0.5,
-    -0.5, 0,
+    -0.5, 0.5, 0, 0.5, 0.5, 0, 0.5, -0.5, 0, -0.5, -0.5, 0, -0.5, 0.5, 0, 0.5, 0.5, 0, 0.5, -0.5, 0,
+    -0.5, -0.5, 0,
   ]);
   const normals = new Float32Array([
     0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,

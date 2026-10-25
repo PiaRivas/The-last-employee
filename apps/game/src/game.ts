@@ -91,7 +91,13 @@ export function state(game: Game): unknown {
 }
 
 // localPort: which employee this screen controls (camera, fists, HUD). status: netplay link for the HUD, null local.
-export function render(game: Game, draw: Draw2D, scene: Scene, localPort = 0, status: string | null = null): void {
+export function render(
+  game: Game,
+  draw: Draw2D,
+  scene: Scene,
+  localPort = 0,
+  status: string | null = null,
+): void {
   draw.scene(sceneDraws(scene, game, localPort));
   drawHud(game, draw, localPort, status);
 }
